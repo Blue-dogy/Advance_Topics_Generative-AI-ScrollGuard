@@ -1,0 +1,104 @@
+"""
+evaluate.py - 기준선 + 에이전트 예측을 같은 라벨로 채점
+사용:  python evaluate.py                         # 기준선만
+       python evaluate.py --pred predictions_claude.csv predictions_gpt.csv
+예측 파일 형식: case_id, run, action, reason   (run 여러 개면 일관성도 계산)
+"""
+import argparse, os
+import numpy as np, pandas as pd
+
+ACTIONS = ["no_intervention", "gentle_prompt", "ask_context"]
+# 비용 행렬 COST[정답][예측]  (설계 선택값 - 보고서에 근거를 적고, 민감도 분석 권장)
+COST = {
+    "no_intervention": {"no_intervention": 0.0, "ask_context": 0.5, "gentle_prompt": 1.0},  # 불필요 개입 = 제품 철학 위반
+    "gentle_prompt":   {"gentle_prompt": 0.0, "ask_context": 0.4, "no_intervention": 0.8},  # 놓침
+    "ask_context":     {"ask_context": 0.0, "gentle_prompt": 0.6, "no_intervention": 0.6},
+}
+INVALID_COST = 1.0
+
+# ---------------- 기준선 ----------------
+def base_none(d):   return pd.Series("no_intervention", index=d.index)
+def base_gentle(d): return pd.Series("gentle_prompt", index=d.index)
+def base_ask(d):    return pd.Series("ask_context", index=d.index)
+def base_threshold(d, minutes=30):
+    return pd.Series(np.where(d.usage_minutes >= minutes, "gentle_prompt", "no_intervention"), index=d.index)
+def autopilot_score(r):
+    s = 0
+    s += pd.notna(r.swipe_interval_cv) and r.swipe_interval_cv < 0.35
+    s += pd.notna(r.avg_dwell_sec) and r.avg_dwell_sec < 10
+    h = int(str(r.time_of_day)[:2]); s += (h >= 23 or h < 5)
+    s += r.entry_trigger == "notification"
+    s += r.usage_sessions >= 8
+    return s
+def base_feature_rule(d):  # 텍스트를 못 읽는 '최선의 규칙 기반' 상한 비교용
+    return pd.Series(["gentle_prompt" if autopilot_score(r) >= 3 else "no_intervention" for r in d.itertuples()], index=d.index)
+BASELINES = {"B0_always_no_intervention": base_none, "B0_always_gentle_prompt": base_gentle,
+             "B0_always_ask_context": base_ask, "B1_time_threshold_30min": base_threshold,
+             "B2_feature_rule_no_text": base_feature_rule}
+
+# ---------------- 지표 ----------------
+def macro_f1(y, p):
+    f = []
+    for a in ACTIONS:
+        tp = ((y == a) & (p == a)).sum(); fp = ((y != a) & (p == a)).sum(); fn = ((y == a) & (p != a)).sum()
+        f.append(0 if tp == 0 else 2 * tp / (2 * tp + fp + fn))
+    return float(np.mean(f))
+
+def score_run(lab, pred):
+    y = lab.expected_action; p = pred.reindex(lab.index).fillna("MISSING")
+    valid = p.isin(ACTIONS)
+    correct = (y == p)
+    cost = np.array([COST[a].get(b, INVALID_COST) for a, b in zip(y, p)])
+    adv = lab.case_type.isin(["adversarial", "boundary"])
+    return dict(
+        accuracy=correct.mean(), macro_f1=macro_f1(y, p),
+        detect_rate=correct[y == "gentle_prompt"].mean(),                       # 개입 필요 사례 탐지율
+        false_intervention=(p[y == "no_intervention"] == "gentle_prompt").mean(), # 의도적 사용에 대한 불필요한 개입률
+        question_burden=(p[y == "no_intervention"] == "ask_context").mean(),     # 의도적 사용에 대한 불필요한 질문률
+        ask_recall=correct[y == "ask_context"].mean(),                          # 모호 사례의 맥락 확인 비율
+        hard_acc=correct[adv].mean(), easy_acc=correct[~adv].mean(),
+        cost_score=1 - cost.mean(), invalid_rate=1 - valid.mean(),
+    ), correct.astype(float).values, p
+
+def evaluate(lab, runs, n_boot=2000, seed=0):
+    res, corr, preds = zip(*[score_run(lab, r) for r in runs])
+    out = {k: float(np.mean([r[k] for r in res])) for k in res[0]}
+    c = np.mean(corr, axis=0); rng = np.random.default_rng(seed)
+    boots = [c[rng.integers(0, len(c), len(c))].mean() for _ in range(n_boot)]
+    out["acc_ci95"] = f"[{np.percentile(boots, 2.5):.2f}, {np.percentile(boots, 97.5):.2f}]"
+    if len(runs) > 1:  # 같은 사례에 대해 run들이 같은 행동을 내는 비율
+        P = pd.concat(preds, axis=1); out["consistency"] = float((P.nunique(axis=1) == 1).mean())
+    else:
+        out["consistency"] = np.nan
+    out["n_runs"] = len(runs)
+    return out, preds[0]
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--inputs", default="benchmark_inputs.csv"); ap.add_argument("--labels", default="benchmark_labels.csv")
+    ap.add_argument("--meta", default="benchmark_meta.csv"); ap.add_argument("--pred", nargs="*", default=[])
+    ap.add_argument("--out", default="results_summary.csv"); ap.add_argument("--confusion", action="store_true")
+    a = ap.parse_args()
+    inp = pd.read_csv(a.inputs).set_index("case_id")
+    lab = pd.read_csv(a.labels).set_index("case_id").join(pd.read_csv(a.meta).set_index("case_id")[["case_type"]])
+    inp = inp.loc[lab.index]
+    table = {}; first = {}
+    for name, fn in BASELINES.items():
+        table[name], first[name] = evaluate(lab, [fn(inp)])
+    for path in a.pred:
+        d = pd.read_csv(path); d["run"] = d["run"] if "run" in d else 0
+        runs = [g.set_index("case_id")["action"].astype(str).str.strip() for _, g in d.groupby("run")]
+        table[os.path.splitext(os.path.basename(path))[0]], first[path] = evaluate(lab, runs)
+    res = pd.DataFrame(table).T
+    cols = ["accuracy", "acc_ci95", "macro_f1", "detect_rate", "false_intervention", "question_burden",
+            "ask_recall", "hard_acc", "cost_score", "invalid_rate", "consistency", "n_runs"]
+    res = res[cols]
+    pd.set_option("display.width", 250); pd.set_option("display.max_columns", 30)
+    print(res.apply(lambda s: s.map(lambda v: f"{v:.2f}" if isinstance(v, float) else v)).to_string())
+    res.to_csv(a.out, encoding="utf-8-sig")
+    if a.confusion:
+        for n, p in first.items():
+            print(f"\n[{n}] 행=정답, 열=예측"); print(pd.crosstab(lab.expected_action, p).reindex(index=ACTIONS, columns=ACTIONS + ["MISSING"], fill_value=0).loc[:, lambda x: x.sum() > 0].to_string())
+
+if __name__ == "__main__":
+    main()
