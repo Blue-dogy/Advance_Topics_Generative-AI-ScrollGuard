@@ -1,5 +1,5 @@
 """
-make_english.py - 한국어 벤치마크를 영어 버전으로 변환 (build_benchmark.py의 CASES 순서와 1:1 대응)
+make_english.py - 한국어 벤치마크를 영어 버전으로 변환 (build_benchmark.py의 CASES, CF_PAIRS 순서와 1:1 대응)
 입력: benchmark_inputs.csv, benchmark_meta.csv, build_benchmark.py (같은 폴더)
 출력: benchmark_inputs_en.csv, benchmark_meta_en.csv, annotation_sheet_en.csv
 라벨(benchmark_labels.csv)은 언어와 무관하므로 그대로 재사용한다.
@@ -59,6 +59,16 @@ EN = [
  ("", "Reading news and repeatedly moving on to related articles, before the start of a work event on the calendar", "Cannot distinguish information gathering from habit"),
 ]
 
+# 제스처 반례 쌍 (build_benchmark.py의 CF_PAIRS와 같은 순서). 쌍의 a/b는 맥락이 같으므로 번역 1개를 공유한다.
+EN_CF = [
+ ("Binge-reading a completed webtoon over the weekend", "Reading a subscribed completed webtoon in order from episode 1, now on episode 23, not moving to other titles", "Stated goal and behavior match (regardless of gesture)"),
+ ("Deleting blurry photos from 1000 travel photos", "Going through photos one by one, deleted 312 times, favorited 41 times, created 2 albums", "Carrying out an organizing task (regardless of gesture)"),
+ ("Reading a long investigative article to the end", "Read the full body of 1 article to the end, highlighted 3 times, shared the link to a notes app at the end", "Purposeful reading (regardless of gesture)"),
+ ("", "Past the user's bedtime goal of 23:00, continuously browsing the feed, no interaction with posts, no search or saves, no switching to other apps", "Exceeded bedtime goal plus no goal-directed actions (regardless of gesture)"),
+ ("", "Entered via a notification, then watched only recommended videos, no search, saves or likes, calendar: assignment work time that started 30 minutes ago", "Drift after a notification plus schedule conflict (regardless of gesture)"),
+ ("", "Browsing the recommended product list, repeatedly opening a product page and going straight back, no search, wishlist or cart, 15 minutes ago the user typed 'I should go to sleep now'", "Behavior contradicts the user's own stated wish plus no goal-directed actions (regardless of gesture)"),
+]
+
 # build_benchmark.py에서 CASES 리터럴만 꺼내 한국어 원문을 얻는다 (재입력으로 인한 오타 방지)
 src = open("build_benchmark.py", encoding="utf-8").read()
 s = src.index("CASES = ["); e = src.index("\n]\n", s) + 3
@@ -66,6 +76,12 @@ ns = dict(nan=float("nan"), NO="no_intervention", GP="gentle_prompt", AC="ask_co
           IN="intentional", UN="unintended", UC="unclear")
 exec(src[s:e], ns); CASES = ns["CASES"]
 assert len(CASES) == len(EN) == 45, (len(CASES), len(EN))
+s2 = src.index("CF_PAIRS = ["); e2 = src.index("\n]\n", s2) + 3
+exec(src[s2:e2], ns); CF_PAIRS = ns["CF_PAIRS"]
+assert len(CF_PAIRS) == len(EN_CF), (len(CF_PAIRS), len(EN_CF))
+# 반례 쌍도 CASES와 같은 형태(인덱스 6=목표, 7=맥락)로 맞춰 아래 점검·매칭에 함께 넣는다
+CASES = CASES + [(None,) * 6 + (c[5], c[6]) for c in CF_PAIRS]
+EN = EN + EN_CF
 
 def digits(t): return sorted(re.findall(r"\d+", t.replace("{m}", "")))
 for i, (c, en) in enumerate(zip(CASES, EN)):                       # 순서·내용 정합성 점검

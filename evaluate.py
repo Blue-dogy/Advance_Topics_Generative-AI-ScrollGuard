@@ -32,9 +32,11 @@ def autopilot_score(r):
     return s
 def base_feature_rule(d):  # 텍스트를 못 읽는 '최선의 규칙 기반' 상한 비교용
     return pd.Series(["gentle_prompt" if autopilot_score(r) >= 3 else "no_intervention" for r in d.itertuples()], index=d.index)
+def base_swipe_cv(d, th=0.6):  # 제스처 숫자 하나만 보는 지름길. 에이전트가 이걸 넘어야 '맥락을 읽는다'고 말할 수 있다
+    return pd.Series(np.where(d.swipe_interval_cv < th, "gentle_prompt", "no_intervention"), index=d.index)  # NaN -> 개입 안 함
 BASELINES = {"B0_always_no_intervention": base_none, "B0_always_gentle_prompt": base_gentle,
              "B0_always_ask_context": base_ask, "B1_time_threshold_30min": base_threshold,
-             "B2_feature_rule_no_text": base_feature_rule}
+             "B2_feature_rule_no_text": base_feature_rule, "B3_swipe_cv_lt_0.6": base_swipe_cv}
 
 # ---------------- 지표 ----------------
 def macro_f1(y, p):
@@ -49,7 +51,11 @@ def score_run(lab, pred):
     valid = p.isin(ACTIONS)
     correct = (y == p)
     cost = np.array([COST[a].get(b, INVALID_COST) for a, b in zip(y, p)])
-    adv = lab.case_type.isin(["adversarial", "boundary"])
+    adv = lab.case_type.isin(["adversarial", "boundary", "counterfactual"])
+    cf = lab.case_type == "counterfactual"
+    # 반례 쌍: 맥락은 같고 제스처만 다르므로 두 예측이 같아야 하고(불변성), 둘 다 맞아야 한다
+    pairs = lab.loc[cf, "pair_id"].str[:-1] if "pair_id" in lab else pd.Series(dtype=str)
+    pg = pd.DataFrame({"pair": pairs, "p": p[pairs.index], "ok": correct[pairs.index]}).groupby("pair")
     return dict(
         accuracy=correct.mean(), macro_f1=macro_f1(y, p),
         detect_rate=correct[y == "gentle_prompt"].mean(),                       # 개입 필요 사례 탐지율
@@ -58,6 +64,9 @@ def score_run(lab, pred):
         ask_recall=correct[y == "ask_context"].mean(),                          # 모호 사례의 맥락 확인 비율
         hard_acc=correct[adv].mean(), easy_acc=correct[~adv].mean(),
         cost_score=1 - cost.mean(), invalid_rate=1 - valid.mean(),
+        cf_acc=correct[cf].mean() if cf.any() else np.nan,                       # 제스처 반례 사례 정확도
+        pair_both_correct=pg.ok.all().mean() if cf.any() else np.nan,           # 쌍 두 개를 모두 맞힌 비율
+        gesture_flip=(pg.p.nunique() > 1).mean() if cf.any() else np.nan,       # 제스처만 바꿨는데 판단이 바뀐 쌍 비율(낮을수록 좋음)
     ), correct.astype(float).values, p
 
 def evaluate(lab, runs, n_boot=2000, seed=0):
@@ -80,7 +89,8 @@ def main():
     ap.add_argument("--out", default="results_summary.csv"); ap.add_argument("--confusion", action="store_true")
     a = ap.parse_args()
     inp = pd.read_csv(a.inputs).set_index("case_id")
-    lab = pd.read_csv(a.labels).set_index("case_id").join(pd.read_csv(a.meta).set_index("case_id")[["case_type"]])
+    meta = pd.read_csv(a.meta, dtype={"pair_id": str}).set_index("case_id")
+    lab = pd.read_csv(a.labels).set_index("case_id").join(meta[[c for c in ["case_type", "pair_id"] if c in meta]])
     inp = inp.loc[lab.index]
     table = {}; first = {}
     for name, fn in BASELINES.items():
@@ -91,7 +101,7 @@ def main():
         table[os.path.splitext(os.path.basename(path))[0]], first[path] = evaluate(lab, runs)
     res = pd.DataFrame(table).T
     cols = ["accuracy", "acc_ci95", "macro_f1", "detect_rate", "false_intervention", "question_burden",
-            "ask_recall", "hard_acc", "cost_score", "invalid_rate", "consistency", "n_runs"]
+            "ask_recall", "hard_acc", "cf_acc", "pair_both_correct", "gesture_flip", "cost_score", "invalid_rate", "consistency", "n_runs"]
     res = res[cols]
     pd.set_option("display.width", 250); pd.set_option("display.max_columns", 30)
     print(res.apply(lambda s: s.map(lambda v: f"{v:.2f}" if isinstance(v, float) else v)).to_string())
