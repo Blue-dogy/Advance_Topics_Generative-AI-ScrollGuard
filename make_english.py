@@ -1,5 +1,5 @@
 """
-make_english.py - 한국어 벤치마크를 영어 버전으로 변환 (build_benchmark.py의 CASES, CF_PAIRS 순서와 1:1 대응)
+make_english.py - 한국어 벤치마크를 영어 버전으로 변환 (build_benchmark.py의 CASES, CF_PAIRS, SC_CASES 순서와 1:1 대응)
 입력: benchmark_inputs.csv, benchmark_meta.csv, build_benchmark.py (같은 폴더)
 출력: benchmark_inputs_en.csv, benchmark_meta_en.csv, annotation_sheet_en.csv
 라벨(benchmark_labels.csv)은 언어와 무관하므로 그대로 재사용한다.
@@ -69,6 +69,34 @@ EN_CF = [
  ("", "Browsing the recommended product list, repeatedly opening a product page and going straight back, no search, wishlist or cart, 15 minutes ago the user typed 'I should go to sleep now'", "Behavior contradicts the user's own stated wish plus no goal-directed actions (regardless of gesture)"),
 ]
 
+# 지름길 반례 (build_benchmark.py의 SC_CASES와 같은 순서)
+EN_SC = [
+ ("", "Viewing a group account feed with photos from a friend's birthday party, wrote a comment on each post 12 times, saved photos 9 times, finally forwarded the photos via messenger and closed the app", "No declared goal, but productive interaction"),
+ ("", "Entered the search query 'bicycle chain replacement', watched only 4 related short videos, switched to a shopping app during viewing and bought parts, then closed the app", "Search, goal achieved, exit"),
+ ("", "Entered via a club account notification, wrote and edited an event announcement post 3 times, wrote 15 replies to applicants' comments, added the event to the calendar app", "Carrying out a task on social media"),
+ ("", "Flipping cards in a vocabulary app and checking answers, completed 180 of today's target of 200 cards, re-studying only the missed cards", "Uniform flipping, but a learning task"),
+ ("", "After a video call with family living abroad, viewing posts in the family group account, liking and commenting on each post, uploaded 3 photos", "Late night and social media, but productive interaction"),
+ ("", "Studying how other short videos are edited in order to edit a video they filmed, switched to a video editing app 6 times while watching, edit project save recorded", "Using short-form video as reference material"),
+ ("", "Entered via a delivery arrival notification, checked the shipment and processed 3 return requests, attached photos to each, 1 customer service chat", "Many sessions, but carrying out a task"),
+ ("Checking recent posts from the account of a company they are applying to for an internship", "Viewing the company account's posts newest first, saved 4 hiring-related posts, switched to a document app and noted the content in an application", "Using social media as an information-gathering tool"),
+ ("", "Videos keep playing via autoplay, almost no screen interaction, past the bedtime goal of 24:00", "Exceeded bedtime goal plus passive viewing"),
+ ("Checking one notice", "After checking the notice, moved to the popular posts list and kept reading posts, no comments or searches", "Drifted from the stated goal plus no goal-directed actions"),
+ ("Checking today's weather", "After checking the weather, moved to celebrity news and kept reading articles in a row, calendar: class at 09:00", "Drifted from the stated goal plus schedule conflict"),
+ ("", "Opened the messenger with no new messages and closed it right away, repeated 24 times, calendar: study time", "Repeated rechecking plus schedule conflict"),
+ ("", "Repeatedly refreshing the same community homepage, no posts opened, past the bedtime goal of 24:00", "Repeated refreshing plus exceeded bedtime goal"),
+ ("Listening to 1 lecture", "After the lecture ended, watched 4 recommended videos in a row, topics shifted to variety shows and games, no switch to a notes app", "Drifted from the stated goal"),
+ ("Ordering 2 household items", "After paying for the 2 items, moved to the recommended products list and kept browsing, nothing added to the cart, past the bedtime goal of 23:00", "Drift after task completion plus exceeded bedtime goal"),
+ ("", "Entered via a breaking-news notification, then kept moving to unrelated articles, opened only the comment list of each article, calendar: team meeting 10:30–12:00", "Drift after a notification plus schedule conflict"),
+ ("", "Saved 2 posts while continuously browsing the feed, then continued browsing right after, no bedtime goal set", "Saving actions mixed with continuous browsing"),
+ ("Referring to cooking short videos", "Saved 3 cooking short videos, then kept watching the feed, topics mixed between cooking and travel", "Partly matches the goal plus drifting signals"),
+ ("", "Watched 3 episodes of a documentary series in a row, no videos outside the series, calendar: assignment due at 14:00", "Consistent viewing vs an imminent deadline"),
+ ("", "Repeatedly opening the messenger, chat history is blocked by the user's settings", "Key information inaccessible"),
+ ("Checking the election results", "Reading vote-count breaking news and analysis articles in a row, refreshed the same article 6 times, bedtime goal of 24:00 approaching", "Goal matches vs repeated refreshing and approaching bedtime"),
+ ("", "Repeatedly viewing posts for the same item on a second-hand market board, 1 chat with a seller, no completed transaction", "Hard to tell comparison shopping from repeated viewing"),
+ ("", "Flipping through and viewing old photos, no deletion, editing or sharing, lingered on some photos for a long time", "Hard to tell reminiscing from passive consumption"),
+ ("Choosing a winter padded jacket", "After searching for padded jackets, opened many product pages, 1 wishlist add, then moved to shoes and bags", "Partly matches the goal plus drifting signals"),
+]
+
 # build_benchmark.py에서 CASES 리터럴만 꺼내 한국어 원문을 얻는다 (재입력으로 인한 오타 방지)
 src = open("build_benchmark.py", encoding="utf-8").read()
 s = src.index("CASES = ["); e = src.index("\n]\n", s) + 3
@@ -82,6 +110,10 @@ assert len(CF_PAIRS) == len(EN_CF), (len(CF_PAIRS), len(EN_CF))
 # 반례 쌍도 CASES와 같은 형태(인덱스 6=목표, 7=맥락)로 맞춰 아래 점검·매칭에 함께 넣는다
 CASES = CASES + [(None,) * 6 + (c[5], c[6]) for c in CF_PAIRS]
 EN = EN + EN_CF
+s3 = src.index("SC_CASES = ["); e3 = src.index("\n]\n", s3) + 3
+exec(src[s3:e3], ns); SC_CASES = ns["SC_CASES"]
+assert len(SC_CASES) == len(EN_SC), (len(SC_CASES), len(EN_SC))
+CASES = CASES + list(SC_CASES); EN = EN + EN_SC
 
 def digits(t): return sorted(re.findall(r"\d+", t.replace("{m}", "")))
 for i, (c, en) in enumerate(zip(CASES, EN)):                       # 순서·내용 정합성 점검
