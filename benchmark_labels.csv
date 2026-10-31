@@ -44,3 +44,15 @@ S042,intentional,no,no_intervention
 S043,intentional,no,no_intervention
 S044,unintended,yes,gentle_prompt
 S045,unclear,uncertain,ask_context
+S046,unintended,yes,gentle_prompt
+S047,unintended,yes,gentle_prompt
+S048,intentional,no,no_intervention
+S049,unintended,yes,gentle_prompt
+S050,intentional,no,no_intervention
+S051,intentional,no,no_intervention
+S052,intentional,no,no_intervention
+S053,unintended,yes,gentle_prompt
+S054,intentional,no,no_intervention
+S055,unintended,yes,gentle_prompt
+S056,intentional,no,no_intervention
+S057,unintended,yes,gentle_prompt

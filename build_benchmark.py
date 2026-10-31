@@ -1,5 +1,5 @@
 """
-build_benchmark.py  (v2)  -  ScrollGuard 벤치마크 45개 생성
+build_benchmark.py  (v2.1)  -  ScrollGuard 벤치마크 57개 생성 (기존 45개 + 제스처 반례 쌍 12개)
  1) 시나리오 문장에서 '정답을 말해 주는 서술'을 제거하고 관측 가능한 단서만 남김
  2) 숫자 4개(분/세션/중앙세션/집중도)는 micro_datasetA.csv의 실제 행에서 추출
  3) 반례(adversarial)·경계(boundary) 사례를 의도적으로 포함
@@ -103,11 +103,46 @@ for i, (tier, t, trig, app, cv, dwell, goal, ctx, intent, action, ctype, why) in
 df = pd.DataFrame(rows).sample(frac=1, random_state=SEED).reset_index(drop=True)  # 순서로 라벨 유추 방지
 df.insert(0, "case_id", [f"S{i+1:03d}" for i in range(len(df))])
 
+# ---------------- 제스처 반례 쌍 (counterfactual, S046~) ----------------
+# 같은 맥락·같은 실제 사용량 행에 제스처(스와이프 간격 CV, 평균 체류)만 바꾼 쌍.
+# 정답은 맥락으로 정해지므로 두 사례의 정답은 같다. 쌍 중 하나는 반드시 'CV 임계값' 지름길과 반대 방향이다.
+# 기존 45개의 추출·셔플·ID는 바꾸지 않는다(별도 시드, 기존 행 제외, 뒤에 이어 붙임).
+# (pair_id, tier, 시각, 진입계기, 앱유형, 사용자선언목표, 최근맥락, intent, action, 라벨근거, (CV_a, 체류_a), (CV_b, 체류_b))
+CF_PAIRS = [
+ ("P1","long","14:00","self_open","comic","주말에 완결 웹툰 정주행","구독 중인 완결 웹툰을 1화부터 순서대로 열람, 현재 23화, 다른 작품으로 이동 없음",IN,NO,"선언 목표와 행동 일치(제스처와 무관)",(0.15,6),(0.95,40)),
+ ("P2","long","21:00","self_open","gallery","여행 사진 1000장 중 흔들린 사진 삭제","사진을 한 장씩 넘기며 삭제 312회, 즐겨찾기 41회, 앨범 2개 생성",IN,NO,"정리 과업 수행 중(제스처와 무관)",(0.10,2),(0.90,25)),
+ ("P3","mid","08:00","search","news","긴 탐사보도 기사 끝까지 읽기","기사 1개 본문을 끝까지 열람, 하이라이트 3회, 마지막에 메모 앱으로 링크 공유",IN,NO,"목적적 읽기(제스처와 무관)",(0.20,9),(1.00,45)),
+ ("P4","long","00:40","self_open","sns_feed","","사용자 취침 목표 23:00 경과, 피드 연속 탐색, 게시물 상호작용·검색·저장 없음, 다른 앱 전환 없음",UN,GP,"취침 목표 초과+목적 행동 부재(제스처와 무관)",(0.15,5),(1.10,25)),
+ ("P5","mid_long","15:00","notification","short_video","","알림으로 진입한 뒤 추천 영상만 시청, 검색·저장·좋아요 없음, 캘린더: 30분 전 시작한 과제 작업 시간",UN,GP,"알림 후 이탈+일정 충돌(제스처와 무관)",(0.12,5),(0.95,30)),
+ ("P6","mid","23:40","self_open","shopping","","추천 상품 목록 탐색, 상세 페이지 열람 후 바로 뒤로 가기 반복, 검색·찜·장바구니 없음, 15분 전 사용자가 '이제 자야지'라고 입력",UN,GP,"본인 의사와 행동 불일치+목적 행동 부재(제스처와 무관)",(0.20,6),(1.00,35)),
+]
+rng_cf = np.random.default_rng(SEED + 1)
+cf_rows = []
+for pid, tier, t, trig, app, goal, ctx, intent, action, why, ga, gb in CF_PAIRS:
+    pool = data.query(TIERS[tier]); pool = pool[~pool.index.isin(used)]
+    idx = rng_cf.choice(pool.index.values); used.add(idx); r = data.loc[idx]
+    minutes = round(r.Usage_sum_duration / 60, 1)
+    for variant, (cv, dwell) in (("a", ga), ("b", gb)):
+        cf_rows.append(dict(
+            time_of_day=t, entry_trigger=trig, app_type=app, user_stated_goal=goal,
+            recent_context=ctx.format(m=int(round(minutes))),
+            usage_minutes=minutes, usage_sessions=int(r.Usage_num_int_all),
+            median_session_sec=round(r.Usage_median_duration, 1), usage_quadratic=round(r.Usage_quadratic, 3),
+            swipe_interval_cv=cv, avg_dwell_sec=dwell,
+            user_intent=intent, intervention_needed={NO: "no", GP: "yes", AC: "uncertain"}[action],
+            expected_action=action, case_type="counterfactual", label_rationale=why,
+            src_user_id=int(r.user_id), src_questionnaire_id=int(r.es_questionnaire_id), pair_id=f"{pid}{variant}",
+        ))
+cf = pd.DataFrame(cf_rows).sample(frac=1, random_state=SEED).reset_index(drop=True)  # 쌍이 연달아 나오지 않게
+cf.insert(0, "case_id", [f"S{len(df)+i+1:03d}" for i in range(len(cf))])
+df["pair_id"] = ""
+df = pd.concat([df, cf], ignore_index=True)
+
 input_cols = ["case_id", "time_of_day", "entry_trigger", "app_type", "user_stated_goal", "recent_context",
               "usage_minutes", "usage_sessions", "median_session_sec", "usage_quadratic",
               "swipe_interval_cv", "avg_dwell_sec"]
 label_cols = ["case_id", "user_intent", "intervention_needed", "expected_action"]
-meta_cols = ["case_id", "case_type", "label_rationale", "src_user_id", "src_questionnaire_id"]
+meta_cols = ["case_id", "case_type", "label_rationale", "src_user_id", "src_questionnaire_id", "pair_id"]
 enc = "utf-8-sig"
 df[input_cols].to_csv("benchmark_inputs.csv", index=False, encoding=enc)
 df[label_cols].to_csv("benchmark_labels.csv", index=False, encoding=enc)

@@ -1,46 +1,58 @@
-﻿case_id,case_type,label_rationale,src_user_id,src_questionnaire_id
-S001,boundary,선언 목표와 행동 부분 일치,510,2
-S002,standard,목적 행동 부재,518,7
-S003,standard,수동적 반복 소비,307,9
-S004,standard,소통 vs 소비 구분 불가,216,20
-S005,boundary,목적·이탈 신호 혼재,1074,19
-S006,standard,기준 이력 없음,622,12
-S007,standard,짧은 유틸리티 사용,373,15
-S008,standard,SNS를 검색 도구로 사용,654,9
-S009,adversarial,세션 많지만 과업 수행,1315,2
-S010,standard,짧은 유틸리티 사용,376,3
-S011,adversarial,SNS+긴 시간이지만 생산 활동,1099,9
-S012,adversarial,세션 다수+심야+수동,637,7
-S013,standard,자기 설정 시간 초과,1103,10
-S014,standard,취침 목표 초과+수동 소비,314,12
-S015,standard,명확한 정보 탐색,1155,2
-S016,boundary,사용자 자율 선언 존중,633,8
-S017,standard,비교 탐색 vs 충동 구분 불가,603,12
-S018,adversarial,숏폼이지만 학습 행동,813,10
-S019,standard,명확한 과업 완료,1103,6
-S020,standard,짧은 유틸리티 사용,421,12
-S021,boundary,핵심 정보 접근 불가,825,3
-S022,standard,과업 종료 후 피드 이탈,1354,1
-S023,standard,사용자 본인 의사와 행동 불일치,820,6
-S024,adversarial,길지만 선언 목표·행동 일치,1099,14
-S025,standard,자기 설정 예산 초과,314,11
-S026,adversarial,알림 없는 반복 재확인,305,2
-S027,boundary,자기 설정 예산 내,836,20
-S028,standard,화면 소비 없음,961,5
-S029,standard,다중 자동조종 신호,439,21
-S030,standard,"독서 앱, 자율적 사용",647,15
-S031,standard,정상 휴식 vs 습관 구분 불가,1214,2
-S032,standard,선언 목표에서 이탈,246,15
-S033,standard,검색→목적 달성→종료,544,15
-S034,standard,수동적 반복 확인,837,14
-S035,boundary,일정과 충돌하는 수동 소비,930,4
-S036,boundary,업무/여가 구분 불가,827,14
-S037,adversarial,심야·장시간이지만 목적적,404,15
-S038,standard,검색 후 피드로 이탈,1316,4
-S039,standard,다중 자동조종 신호,824,10
-S040,standard,정보 수집 vs 습관 구분 불가,1094,5
-S041,adversarial,총 시간은 짧아도 강박적 재확인,394,3
-S042,adversarial,사용 집중도 높아도 목적적,574,12
-S043,standard,이동 중 유틸리티,622,11
-S044,standard,일정 직전 수동 소비,426,18
-S045,boundary,목표 일부 일치+예산 초과,156,13
+﻿case_id,case_type,label_rationale,src_user_id,src_questionnaire_id,pair_id
+S001,boundary,선언 목표와 행동 부분 일치,510,2,
+S002,standard,목적 행동 부재,518,7,
+S003,standard,수동적 반복 소비,307,9,
+S004,standard,소통 vs 소비 구분 불가,216,20,
+S005,boundary,목적·이탈 신호 혼재,1074,19,
+S006,standard,기준 이력 없음,622,12,
+S007,standard,짧은 유틸리티 사용,373,15,
+S008,standard,SNS를 검색 도구로 사용,654,9,
+S009,adversarial,세션 많지만 과업 수행,1315,2,
+S010,standard,짧은 유틸리티 사용,376,3,
+S011,adversarial,SNS+긴 시간이지만 생산 활동,1099,9,
+S012,adversarial,세션 다수+심야+수동,637,7,
+S013,standard,자기 설정 시간 초과,1103,10,
+S014,standard,취침 목표 초과+수동 소비,314,12,
+S015,standard,명확한 정보 탐색,1155,2,
+S016,boundary,사용자 자율 선언 존중,633,8,
+S017,standard,비교 탐색 vs 충동 구분 불가,603,12,
+S018,adversarial,숏폼이지만 학습 행동,813,10,
+S019,standard,명확한 과업 완료,1103,6,
+S020,standard,짧은 유틸리티 사용,421,12,
+S021,boundary,핵심 정보 접근 불가,825,3,
+S022,standard,과업 종료 후 피드 이탈,1354,1,
+S023,standard,사용자 본인 의사와 행동 불일치,820,6,
+S024,adversarial,길지만 선언 목표·행동 일치,1099,14,
+S025,standard,자기 설정 예산 초과,314,11,
+S026,adversarial,알림 없는 반복 재확인,305,2,
+S027,boundary,자기 설정 예산 내,836,20,
+S028,standard,화면 소비 없음,961,5,
+S029,standard,다중 자동조종 신호,439,21,
+S030,standard,"독서 앱, 자율적 사용",647,15,
+S031,standard,정상 휴식 vs 습관 구분 불가,1214,2,
+S032,standard,선언 목표에서 이탈,246,15,
+S033,standard,검색→목적 달성→종료,544,15,
+S034,standard,수동적 반복 확인,837,14,
+S035,boundary,일정과 충돌하는 수동 소비,930,4,
+S036,boundary,업무/여가 구분 불가,827,14,
+S037,adversarial,심야·장시간이지만 목적적,404,15,
+S038,standard,검색 후 피드로 이탈,1316,4,
+S039,standard,다중 자동조종 신호,824,10,
+S040,standard,정보 수집 vs 습관 구분 불가,1094,5,
+S041,adversarial,총 시간은 짧아도 강박적 재확인,394,3,
+S042,adversarial,사용 집중도 높아도 목적적,574,12,
+S043,standard,이동 중 유틸리티,622,11,
+S044,standard,일정 직전 수동 소비,426,18,
+S045,boundary,목표 일부 일치+예산 초과,156,13,
+S046,counterfactual,본인 의사와 행동 불일치+목적 행동 부재(제스처와 무관),1041,20,P6a
+S047,counterfactual,알림 후 이탈+일정 충돌(제스처와 무관),439,11,P5b
+S048,counterfactual,선언 목표와 행동 일치(제스처와 무관),375,13,P1a
+S049,counterfactual,알림 후 이탈+일정 충돌(제스처와 무관),439,11,P5a
+S050,counterfactual,목적적 읽기(제스처와 무관),310,4,P3b
+S051,counterfactual,정리 과업 수행 중(제스처와 무관),518,20,P2a
+S052,counterfactual,선언 목표와 행동 일치(제스처와 무관),375,13,P1b
+S053,counterfactual,본인 의사와 행동 불일치+목적 행동 부재(제스처와 무관),1041,20,P6b
+S054,counterfactual,목적적 읽기(제스처와 무관),310,4,P3a
+S055,counterfactual,취침 목표 초과+목적 행동 부재(제스처와 무관),1068,11,P4b
+S056,counterfactual,정리 과업 수행 중(제스처와 무관),518,20,P2b
+S057,counterfactual,취침 목표 초과+목적 행동 부재(제스처와 무관),1068,11,P4a

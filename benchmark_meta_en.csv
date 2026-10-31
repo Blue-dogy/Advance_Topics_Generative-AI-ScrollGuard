@@ -1,46 +1,58 @@
-﻿case_id,case_type,label_rationale,src_user_id,src_questionnaire_id
-S001,boundary,Behavior partially matches the stated goal,510,2
-S002,standard,No goal-directed actions,518,7
-S003,standard,Passive repetitive consumption,307,9
-S004,standard,Cannot distinguish interaction from consumption,216,20
-S005,boundary,Mixed goal-directed and drifting signals,1074,19
-S006,standard,No baseline history,622,12
-S007,standard,Short utility use,373,15
-S008,standard,Using social media as a search tool,654,9
-S009,adversarial,"Many sessions, but carrying out a task",1315,2
-S010,standard,Short utility use,376,3
-S011,adversarial,"Social media and long duration, but productive activity",1099,9
-S012,adversarial,"Many sessions, late night, passive",637,7
-S013,standard,Exceeded the self-set time,1103,10
-S014,standard,Exceeded bedtime goal plus passive consumption,314,12
-S015,standard,Clear information seeking,1155,2
-S016,boundary,Respect the user's explicit declaration,633,8
-S017,standard,Cannot distinguish comparison shopping from impulse browsing,603,12
-S018,adversarial,"Short-form video, but learning behavior",813,10
-S019,standard,Clear task completed,1103,6
-S020,standard,Short utility use,421,12
-S021,boundary,Key information not accessible,825,3
-S022,standard,Drifted into the feed after the task was finished,1354,1
-S023,standard,Behavior conflicts with the user's own stated wish,820,6
-S024,adversarial,"Long, but behavior matches the stated goal",1099,14
-S025,standard,Exceeded the self-set time budget,314,11
-S026,adversarial,Repeated rechecking without notifications,305,2
-S027,boundary,Within the user's self-set time budget,836,20
-S028,standard,No screen consumption,961,5
-S029,standard,Multiple autopilot signals,439,21
-S030,standard,"Reading app, self-directed use",647,15
-S031,standard,Cannot distinguish a normal break from a habit,1214,2
-S032,standard,Drifted away from the stated goal,246,15
-S033,standard,"Search, goal achieved, exit",544,15
-S034,standard,Passive repetitive checking,837,14
-S035,boundary,Passive consumption that conflicts with the schedule,930,4
-S036,boundary,Cannot distinguish work from leisure,827,14
-S037,adversarial,"Late night and long duration, but purposeful",404,15
-S038,standard,Drifted into the feed after searching,1316,4
-S039,standard,Multiple autopilot signals,824,10
-S040,standard,Cannot distinguish information gathering from habit,1094,5
-S041,adversarial,"Short total time, but compulsive rechecking",394,3
-S042,adversarial,Purposeful despite high usage concentration,574,12
-S043,standard,Utility use while in transit,622,11
-S044,standard,Passive consumption just before a scheduled event,426,18
-S045,boundary,"Partially matches the goal, plus exceeded budget",156,13
+﻿case_id,case_type,label_rationale,src_user_id,src_questionnaire_id,pair_id
+S001,boundary,Behavior partially matches the stated goal,510,2,
+S002,standard,No goal-directed actions,518,7,
+S003,standard,Passive repetitive consumption,307,9,
+S004,standard,Cannot distinguish interaction from consumption,216,20,
+S005,boundary,Mixed goal-directed and drifting signals,1074,19,
+S006,standard,No baseline history,622,12,
+S007,standard,Short utility use,373,15,
+S008,standard,Using social media as a search tool,654,9,
+S009,adversarial,"Many sessions, but carrying out a task",1315,2,
+S010,standard,Short utility use,376,3,
+S011,adversarial,"Social media and long duration, but productive activity",1099,9,
+S012,adversarial,"Many sessions, late night, passive",637,7,
+S013,standard,Exceeded the self-set time,1103,10,
+S014,standard,Exceeded bedtime goal plus passive consumption,314,12,
+S015,standard,Clear information seeking,1155,2,
+S016,boundary,Respect the user's explicit declaration,633,8,
+S017,standard,Cannot distinguish comparison shopping from impulse browsing,603,12,
+S018,adversarial,"Short-form video, but learning behavior",813,10,
+S019,standard,Clear task completed,1103,6,
+S020,standard,Short utility use,421,12,
+S021,boundary,Key information not accessible,825,3,
+S022,standard,Drifted into the feed after the task was finished,1354,1,
+S023,standard,Behavior conflicts with the user's own stated wish,820,6,
+S024,adversarial,"Long, but behavior matches the stated goal",1099,14,
+S025,standard,Exceeded the self-set time budget,314,11,
+S026,adversarial,Repeated rechecking without notifications,305,2,
+S027,boundary,Within the user's self-set time budget,836,20,
+S028,standard,No screen consumption,961,5,
+S029,standard,Multiple autopilot signals,439,21,
+S030,standard,"Reading app, self-directed use",647,15,
+S031,standard,Cannot distinguish a normal break from a habit,1214,2,
+S032,standard,Drifted away from the stated goal,246,15,
+S033,standard,"Search, goal achieved, exit",544,15,
+S034,standard,Passive repetitive checking,837,14,
+S035,boundary,Passive consumption that conflicts with the schedule,930,4,
+S036,boundary,Cannot distinguish work from leisure,827,14,
+S037,adversarial,"Late night and long duration, but purposeful",404,15,
+S038,standard,Drifted into the feed after searching,1316,4,
+S039,standard,Multiple autopilot signals,824,10,
+S040,standard,Cannot distinguish information gathering from habit,1094,5,
+S041,adversarial,"Short total time, but compulsive rechecking",394,3,
+S042,adversarial,Purposeful despite high usage concentration,574,12,
+S043,standard,Utility use while in transit,622,11,
+S044,standard,Passive consumption just before a scheduled event,426,18,
+S045,boundary,"Partially matches the goal, plus exceeded budget",156,13,
+S046,counterfactual,Behavior contradicts the user's own stated wish plus no goal-directed actions (regardless of gesture),1041,20,P6a
+S047,counterfactual,Drift after a notification plus schedule conflict (regardless of gesture),439,11,P5b
+S048,counterfactual,Stated goal and behavior match (regardless of gesture),375,13,P1a
+S049,counterfactual,Drift after a notification plus schedule conflict (regardless of gesture),439,11,P5a
+S050,counterfactual,Purposeful reading (regardless of gesture),310,4,P3b
+S051,counterfactual,Carrying out an organizing task (regardless of gesture),518,20,P2a
+S052,counterfactual,Stated goal and behavior match (regardless of gesture),375,13,P1b
+S053,counterfactual,Behavior contradicts the user's own stated wish plus no goal-directed actions (regardless of gesture),1041,20,P6b
+S054,counterfactual,Purposeful reading (regardless of gesture),310,4,P3a
+S055,counterfactual,Exceeded bedtime goal plus no goal-directed actions (regardless of gesture),1068,11,P4b
+S056,counterfactual,Carrying out an organizing task (regardless of gesture),518,20,P2b
+S057,counterfactual,Exceeded bedtime goal plus no goal-directed actions (regardless of gesture),1068,11,P4a
