@@ -82,6 +82,17 @@ def evaluate(lab, runs, n_boot=2000, seed=0):
     out["n_runs"] = len(runs)
     return out, preds[0]
 
+def tool_metrics(lab, d):
+    """터치 트랙(run_agent_tools.py) 예측 파일에만 있는 tools 열로 도구 사용 행동을 요약"""
+    d = d[d.case_id.isin(lab.index)].copy()
+    t = d.tools.fillna("").astype(str)
+    d["ctx"] = t.str.contains("get_user_context"); d["touch"] = t.str.contains("get_touch_log")
+    d["ok"] = d.action.astype(str).str.strip().values == lab.expected_action.reindex(d.case_id).values
+    return dict(context_check_rate=d.ctx.mean(), touch_check_rate=d.touch.mean(),
+                stats_tool_rate=t.str.contains("compute_stats").mean(), mean_tool_calls=d.n_steps.mean(),
+                acc_with_context=d.ok[d.ctx].mean() if d.ctx.any() else np.nan,
+                acc_without_context=d.ok[~d.ctx].mean() if (~d.ctx).any() else np.nan)
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--inputs", default="benchmark_inputs.csv"); ap.add_argument("--labels", default="benchmark_labels.csv")
@@ -92,19 +103,27 @@ def main():
     meta = pd.read_csv(a.meta, dtype={"pair_id": str}).set_index("case_id")
     lab = pd.read_csv(a.labels).set_index("case_id").join(meta[[c for c in ["case_type", "pair_id"] if c in meta]])
     inp = inp.loc[lab.index]
-    table = {}; first = {}
+    table = {}; first = {}; tools = {}
     for name, fn in BASELINES.items():
         table[name], first[name] = evaluate(lab, [fn(inp)])
     for path in a.pred:
         d = pd.read_csv(path); d["run"] = d["run"] if "run" in d else 0
         runs = [g.set_index("case_id")["action"].astype(str).str.strip() for _, g in d.groupby("run")]
-        table[os.path.splitext(os.path.basename(path))[0]], first[path] = evaluate(lab, runs)
+        name = os.path.splitext(os.path.basename(path))[0]
+        table[name], first[path] = evaluate(lab, runs)
+        if "tools" in d:
+            tools[name] = tool_metrics(lab, d)
     res = pd.DataFrame(table).T
     cols = ["accuracy", "acc_ci95", "macro_f1", "detect_rate", "false_intervention", "question_burden",
             "ask_recall", "hard_acc", "cf_acc", "pair_both_correct", "gesture_flip", "cost_score", "invalid_rate", "consistency", "n_runs"]
     res = res[cols]
     pd.set_option("display.width", 250); pd.set_option("display.max_columns", 30)
     print(res.apply(lambda s: s.map(lambda v: f"{v:.2f}" if isinstance(v, float) else v)).to_string())
+    if tools:
+        tt = pd.DataFrame(tools).T
+        print("\n[터치 트랙 도구 사용] context_check_rate=맥락 도구를 부른 비율, acc_with/without_context=맥락 확인 여부별 정확도")
+        print(tt.map(lambda v: f"{v:.2f}").to_string())
+        res = res.join(tt)
     res.to_csv(a.out, encoding="utf-8-sig")
     if a.confusion:
         for n, p in first.items():

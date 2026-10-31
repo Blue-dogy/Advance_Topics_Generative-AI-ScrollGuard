@@ -56,3 +56,27 @@ S054,08:00,search,news,Reading a long investigative article to the end,"Read the
 S055,00:40,self_open,sns_feed,,"Past the user's bedtime goal of 23:00, continuously browsing the feed, no interaction with posts, no search or saves, no switching to other apps",44.9,2,1348.1,0.502,1.1,25.0
 S056,21:00,self_open,gallery,Deleting blurry photos from 1000 travel photos,"Going through photos one by one, deleted 312 times, favorited 41 times, created 2 albums",31.7,5,139.9,0.395,0.9,25.0
 S057,00:40,self_open,sns_feed,,"Past the user's bedtime goal of 23:00, continuously browsing the feed, no interaction with posts, no search or saves, no switching to other apps",44.9,2,1348.1,0.502,0.15,5.0
+S058,02:10,self_open,long_video,,"Videos keep playing via autoplay, almost no screen interaction, past the bedtime goal of 24:00",59.7,3,1769.0,0.499,0.9,240.0
+S059,21:00,self_open,sns_feed,,"Saved 2 posts while continuously browsing the feed, then continued browsing right after, no bedtime goal set",31.7,7,161.1,0.299,0.25,6.0
+S060,19:30,self_open,sns_feed,,"Viewing a group account feed with photos from a friend's birthday party, wrote a comment on each post 12 times, saved photos 9 times, finally forwarded the photos via messenger and closed the app",51.9,2,1556.2,0.527,0.25,8.0
+S061,13:30,self_open,long_video,,"Watched 3 episodes of a documentary series in a row, no videos outside the series, calendar: assignment due at 14:00",60.0,1,3600.0,1.0,1.0,300.0
+S062,14:30,self_open,messenger,,"Opened the messenger with no new messages and closed it right away, repeated 24 times, calendar: study time",25.6,10,46.8,0.248,,
+S063,22:40,notification,community,Checking one notice,"After checking the notice, moved to the popular posts list and kept reading posts, no comments or searches",21.1,8,21.4,0.462,0.8,50.0
+S064,21:00,search,long_video,Listening to 1 lecture,"After the lecture ended, watched 4 recommended videos in a row, topics shifted to variety shows and games, no switch to a notes app",40.1,2,1202.5,0.996,0.85,120.0
+S065,18:00,search,short_video,,"Entered the search query 'bicycle chain replacement', watched only 4 related short videos, switched to a shopping app during viewing and bought parts, then closed the app",19.6,3,30.6,0.943,0.3,10.0
+S066,15:00,self_open,community,,"Repeatedly viewing posts for the same item on a second-hand market board, 1 chat with a seller, no completed transaction",27.2,2,816.3,0.988,0.7,40.0
+S067,13:00,self_open,short_video,,"Studying how other short videos are edited in order to edit a video they filmed, switched to a video editing app 6 times while watching, edit project save recorded",44.9,5,543.9,0.353,0.35,15.0
+S068,10:30,notification,sns_feed,,"Entered via a club account notification, wrote and edited an event announcement post 3 times, wrote 15 replies to applicants' comments, added the event to the calendar app",29.4,2,880.6,0.99,0.4,12.0
+S069,01:30,self_open,browser,,"Repeatedly refreshing the same community homepage, no posts opened, past the bedtime goal of 24:00",9.6,14,13.5,0.257,,
+S070,11:00,notification,news,,"Entered via a breaking-news notification, then kept moving to unrelated articles, opened only the comment list of each article, calendar: team meeting 10:30–12:00",24.5,4,224.6,0.571,0.65,38.0
+S071,07:40,self_open,education,,"Flipping cards in a vocabulary app and checking answers, completed 180 of today's target of 200 cards, re-studying only the missed cards",10.6,3,22.1,0.902,0.15,3.0
+S072,23:30,self_open,sns_feed,,"After a video call with family living abroad, viewing posts in the family group account, liking and commenting on each post, uploaded 3 photos",57.9,2,1738.2,0.997,0.2,6.0
+S073,23:00,self_open,gallery,,"Flipping through and viewing old photos, no deletion, editing or sharing, lingered on some photos for a long time",47.6,3,1274.1,0.504,0.4,20.0
+S074,18:30,search,short_video,Referring to cooking short videos,"Saved 3 cooking short videos, then kept watching the feed, topics mixed between cooking and travel",35.7,7,16.0,0.554,0.2,7.0
+S075,23:50,notification,news,Checking the election results,"Reading vote-count breaking news and analysis articles in a row, refreshed the same article 6 times, bedtime goal of 24:00 approaching",48.2,4,825.0,0.353,0.3,12.0
+S076,22:00,search,shopping,Choosing a winter padded jacket,"After searching for padded jackets, opened many product pages, 1 wishlist add, then moved to shoes and bags",46.3,2,1390.0,0.75,0.25,8.0
+S077,16:00,search,sns_feed,Checking recent posts from the account of a company they are applying to for an internship,"Viewing the company account's posts newest first, saved 4 hiring-related posts, switched to a document app and noted the content in an application",15.4,4,19.7,0.914,0.3,14.0
+S078,08:50,self_open,news,Checking today's weather,"After checking the weather, moved to celebrity news and kept reading articles in a row, calendar: class at 09:00",18.3,3,402.0,0.529,0.7,45.0
+S079,23:10,search,shopping,Ordering 2 household items,"After paying for the 2 items, moved to the recommended products list and kept browsing, nothing added to the cart, past the bedtime goal of 23:00",46.8,3,32.8,0.974,0.75,40.0
+S080,16:00,notification,messenger,,"Repeatedly opening the messenger, chat history is blocked by the user's settings",10.7,10,34.1,0.163,,
+S081,12:10,notification,shopping,,"Entered via a delivery arrival notification, checked the shipment and processed 3 return requests, attached photos to each, 1 customer service chat",13.1,13,20.1,0.304,0.3,9.0

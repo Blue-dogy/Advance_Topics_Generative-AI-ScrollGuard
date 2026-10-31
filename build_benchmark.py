@@ -1,5 +1,5 @@
 """
-build_benchmark.py  (v2.1)  -  ScrollGuard 벤치마크 57개 생성 (기존 45개 + 제스처 반례 쌍 12개)
+build_benchmark.py  (v2.2)  -  ScrollGuard 벤치마크 81개 생성 (기존 45개 + 제스처 반례 쌍 12개 + 지름길 반례 24개)
  1) 시나리오 문장에서 '정답을 말해 주는 서술'을 제거하고 관측 가능한 단서만 남김
  2) 숫자 4개(분/세션/중앙세션/집중도)는 micro_datasetA.csv의 실제 행에서 추출
  3) 반례(adversarial)·경계(boundary) 사례를 의도적으로 포함
@@ -137,6 +137,60 @@ cf = pd.DataFrame(cf_rows).sample(frac=1, random_state=SEED).reset_index(drop=Tr
 cf.insert(0, "case_id", [f"S{len(df)+i+1:03d}" for i in range(len(cf))])
 df["pair_id"] = ""
 df = pd.concat([df, cf], ignore_index=True)
+
+# ---------------- 지름길 반례 (S058~) ----------------
+# 맥락을 읽지 않고 숫자·범주 하나로 맞히는 지름길을 깨는 사례. 각 사례는 아래 지름길 중 여럿과 반대 방향이다.
+#   체류<35초·CV<0.6 -> 개입 / 선언 목표 있음 -> 개입 안 함 / sns_feed·short_video -> 개입
+#   제스처 값 없음 -> 개입 안 함 / 심야 -> 개입 / 문장이 길면 개입
+# 형식은 CASES와 같다. 기존 57개는 바꾸지 않는다(별도 시드, 뒤에 이어 붙임).
+SC_CASES = [
+ # ---- no_intervention: 제스처·앱·시각은 '개입' 쪽, 맥락은 목적 행동 ----
+ ("long","19:30","self_open","sns_feed",0.25,8,"","친구 생일 파티 사진이 올라온 단체 계정 피드 열람, 게시물마다 댓글 작성 12회, 사진 저장 9회, 마지막에 메신저로 사진 전달 후 앱 종료",IN,NO,"shortcut","목표 선언 없지만 생산적 상호작용"),
+ ("mid","18:00","search","short_video",0.30,10,"","검색어 '자전거 체인 교체' 입력 후 관련 쇼츠 4개만 시청, 시청 중 쇼핑 앱으로 전환해 부품 구매, 이후 앱 종료",IN,NO,"shortcut","검색→목적 달성→종료"),
+ ("mid_long","10:30","notification","sns_feed",0.40,12,"","동아리 계정 알림으로 진입, 행사 안내 게시물 작성·수정 3회, 신청자 댓글에 답글 15개 작성, 일정 앱에 행사 일정 등록",IN,NO,"shortcut","SNS에서 과업 수행"),
+ ("mid","07:40","self_open","education",0.15,3,"","단어장 앱에서 카드를 넘기며 정답 확인, 오늘 목표 카드 200장 중 180장 완료, 틀린 카드만 다시 학습",IN,NO,"shortcut","균일한 넘김이지만 학습 과업"),
+ ("long","23:30","self_open","sns_feed",0.20,6,"","해외에 사는 가족과 영상통화 후 가족 단체 계정 게시물 열람, 게시물마다 좋아요와 댓글 작성, 사진 3장 업로드",IN,NO,"shortcut","심야·SNS지만 생산적 상호작용"),
+ ("long","13:00","self_open","short_video",0.35,15,"","직접 찍은 영상을 편집하려고 다른 쇼츠의 편집 방식 참고, 시청 중 영상 편집 앱으로 전환 6회, 편집 프로젝트 저장 기록 있음",IN,NO,"shortcut","숏폼을 참고 자료로 사용"),
+ ("frag","12:10","notification","shopping",0.30,9,"","택배 도착 알림으로 진입, 배송 조회 후 반품 신청 3건 처리, 각 건마다 사진 첨부, 고객센터 채팅 1회",IN,NO,"shortcut","세션 많지만 과업 수행"),
+ ("mid","16:00","search","sns_feed",0.30,14,"인턴 지원 회사 계정의 최근 게시물 확인","회사 계정 게시물을 최신순으로 열람, 채용 관련 게시물 4개 저장, 문서 앱으로 전환해 지원서에 내용 메모",IN,NO,"shortcut","SNS를 정보 수집 도구로 사용"),
+ # ---- gentle_prompt: 제스처는 '불규칙·긴 체류', 목표 선언 있음·SNS 아님·값 없음 등 ----
+ ("xlong","02:10","self_open","long_video",0.90,240,"","자동 재생으로 영상이 이어짐, 화면 조작 거의 없음, 취침 목표 24:00 경과",UN,GP,"shortcut","취침 목표 초과+수동 시청"),
+ ("mid_long","22:40","notification","community",0.80,50,"공지 하나 확인","공지 확인 후 인기글 목록으로 이동해 글 계속 열람, 댓글·검색 없음",UN,GP,"shortcut","선언 목표에서 이탈+목적 행동 부재"),
+ ("mid","08:50","self_open","news",0.70,45,"오늘 날씨 확인","날씨 확인 후 연예 기사로 이동해 연속 열람, 캘린더: 09:00 수업",UN,GP,"shortcut","선언 목표에서 이탈+일정 충돌"),
+ ("many_long","14:30","self_open","messenger",nan,nan,"","새 메시지 없이 메신저 실행 후 바로 종료 반복 24회, 캘린더: 공부 시간",UN,GP,"shortcut","반복 재확인+일정 충돌"),
+ ("frag","01:30","self_open","browser",nan,nan,"","같은 커뮤니티 홈페이지 새로고침 반복, 글 열람 없음, 취침 목표 24:00 경과",UN,GP,"shortcut","반복 새로고침+취침 목표 초과"),
+ ("long","21:00","search","long_video",0.85,120,"강의 1개 듣기","강의 종료 후 추천 영상 4개 연속 시청, 주제가 예능·게임으로 변화, 노트 앱 전환 없음",UN,GP,"shortcut","선언 목표에서 이탈"),
+ ("long","23:10","search","shopping",0.75,40,"생필품 2개 주문","2개 결제 후 추천 상품 목록으로 이동해 계속 열람, 장바구니 추가 없음, 취침 목표 23:00 경과",UN,GP,"shortcut","과업 종료 후 이탈+취침 목표 초과"),
+ ("mid_long","11:00","notification","news",0.65,38,"","속보 알림으로 진입 후 관련 없는 기사로 이동 반복, 기사마다 댓글 목록만 열람, 캘린더: 10:30–12:00 팀 회의",UN,GP,"shortcut","알림 후 이탈+일정 충돌"),
+ # ---- ask_context 보강: 목적 신호와 이탈 신호가 섞이거나 핵심 정보 접근 불가 ----
+ ("long","21:00","self_open","sns_feed",0.25,6,"","피드 연속 탐색 중 게시물 2개 저장, 직후 다시 연속 탐색, 취침 목표 설정 없음",UC,AC,"boundary","저장 행동과 연속 탐색 혼재"),
+ ("long","18:30","search","short_video",0.20,7,"요리 쇼츠 참고","요리 쇼츠 3개 저장 후 피드 연속 시청, 시청 주제가 요리와 여행으로 섞임",UC,AC,"boundary","목표 일부 일치+이탈 신호"),
+ ("xlong","13:30","self_open","long_video",1.00,300,"","다큐멘터리 시리즈 3편 연속 시청, 시리즈 외 영상 없음, 캘린더: 14:00 과제 마감",UC,AC,"boundary","일관된 시청 vs 일정 임박"),
+ ("frag","16:00","notification","messenger",nan,nan,"","메신저 실행 반복, 대화방 기록은 사용자 설정으로 접근 차단",UC,AC,"boundary","핵심 정보 접근 불가"),
+ ("long","23:50","notification","news",0.30,12,"선거 결과 확인","개표 속보와 해설 기사 연속 열람, 같은 기사 새로고침 6회, 취침 목표 24:00 임박",UC,AC,"boundary","목표 일치 vs 반복 새로고침·취침 임박"),
+ ("mid_long","15:00","self_open","community",0.70,40,"","중고거래 게시판에서 같은 품목 글 반복 열람, 판매자에게 채팅 1회, 거래 완료 기록 없음",UC,AC,"boundary","비교 탐색 vs 반복 열람 구분 어려움"),
+ ("long","23:00","self_open","gallery",0.40,20,"","오래된 사진을 넘기며 열람, 삭제·편집·공유 없음, 일부 사진에서 오래 머묾",UC,AC,"boundary","회상 vs 수동 소비 구분 어려움"),
+ ("long","22:00","search","shopping",0.25,8,"겨울 패딩 고르기","패딩 검색 후 상세 페이지 다수 열람, 찜 1회, 이후 신발·가방 상품으로 이동",UC,AC,"boundary","목표 일부 일치+이탈 신호"),
+]
+rng_sc = np.random.default_rng(SEED + 2)
+sc_rows = []
+for tier, t, trig, app, cv, dwell, goal, ctx, intent, action, ctype, why in SC_CASES:
+    pool = data.query(TIERS[tier]); pool = pool[~pool.index.isin(used)]
+    idx = rng_sc.choice(pool.index.values); used.add(idx); r = data.loc[idx]
+    minutes = round(r.Usage_sum_duration / 60, 1)
+    sc_rows.append(dict(
+        time_of_day=t, entry_trigger=trig, app_type=app, user_stated_goal=goal,
+        recent_context=ctx.format(m=int(round(minutes))),
+        usage_minutes=minutes, usage_sessions=int(r.Usage_num_int_all),
+        median_session_sec=round(r.Usage_median_duration, 1), usage_quadratic=round(r.Usage_quadratic, 3),
+        swipe_interval_cv=cv, avg_dwell_sec=dwell,
+        user_intent=intent, intervention_needed={NO: "no", GP: "yes", AC: "uncertain"}[action],
+        expected_action=action, case_type=ctype, label_rationale=why,
+        src_user_id=int(r.user_id), src_questionnaire_id=int(r.es_questionnaire_id), pair_id="",
+    ))
+sc = pd.DataFrame(sc_rows).sample(frac=1, random_state=SEED).reset_index(drop=True)
+sc.insert(0, "case_id", [f"S{len(df)+i+1:03d}" for i in range(len(sc))])
+df = pd.concat([df, sc], ignore_index=True)
 
 input_cols = ["case_id", "time_of_day", "entry_trigger", "app_type", "user_stated_goal", "recent_context",
               "usage_minutes", "usage_sessions", "median_session_sec", "usage_quadratic",
