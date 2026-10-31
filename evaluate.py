@@ -9,10 +9,23 @@ import numpy as np, pandas as pd
 
 ACTIONS = ["no_intervention", "gentle_prompt", "ask_context"]
 # 비용 행렬 COST[정답][예측]  (설계 선택값 - 보고서에 근거를 적고, 민감도 분석 권장)
+# v2: 질문(ask_context)도 사용자를 멈춰 세우는 '방해'다. 의도적 사용 중에 묻는 것은 개입과 거의 같은 비용(0.8)으로 본다.
+#     v1(0.5/0.4)에서는 '항상 ask_context'가 비용 점수 1위(0.65)가 되는 허점이 있었다. 모든 오답의 최대 비용을 피하는 '찍기'가 이기면 안 된다.
 COST = {
-    "no_intervention": {"no_intervention": 0.0, "ask_context": 0.5, "gentle_prompt": 1.0},  # 불필요 개입 = 제품 철학 위반
-    "gentle_prompt":   {"gentle_prompt": 0.0, "ask_context": 0.4, "no_intervention": 0.8},  # 놓침
+    "no_intervention": {"no_intervention": 0.0, "ask_context": 0.8, "gentle_prompt": 1.0},  # 불필요 개입 = 제품 철학 위반, 불필요 질문도 방해
+    "gentle_prompt":   {"gentle_prompt": 0.0, "ask_context": 0.5, "no_intervention": 0.8},  # 놓침 > 질문(질문도 흐름은 끊어 줌)
     "ask_context":     {"ask_context": 0.0, "gentle_prompt": 0.6, "no_intervention": 0.6},
+}
+COST_SETS = {  # --sensitivity: 가중치를 바꿔도 순위가 유지되는지 확인
+    "v2(default)": COST,
+    "v1_old": {"no_intervention": {"no_intervention": 0.0, "ask_context": 0.5, "gentle_prompt": 1.0},
+               "gentle_prompt": {"gentle_prompt": 0.0, "ask_context": 0.4, "no_intervention": 0.8},
+               "ask_context": {"ask_context": 0.0, "gentle_prompt": 0.6, "no_intervention": 0.6}},
+    "miss_heavy": {"no_intervention": {"no_intervention": 0.0, "ask_context": 0.6, "gentle_prompt": 0.8},
+                   "gentle_prompt": {"gentle_prompt": 0.0, "ask_context": 0.5, "no_intervention": 1.0},
+                   "ask_context": {"ask_context": 0.0, "gentle_prompt": 0.6, "no_intervention": 0.6}},
+    "equal": {a: {b: (0.0 if a == b else 1.0) for b in ["no_intervention", "gentle_prompt", "ask_context"]}
+              for a in ["no_intervention", "gentle_prompt", "ask_context"]},   # 모든 오답 1.0 = 정확도와 같음
 }
 INVALID_COST = 1.0
 
@@ -45,6 +58,9 @@ def macro_f1(y, p):
         tp = ((y == a) & (p == a)).sum(); fp = ((y != a) & (p == a)).sum(); fn = ((y == a) & (p != a)).sum()
         f.append(0 if tp == 0 else 2 * tp / (2 * tp + fp + fn))
     return float(np.mean(f))
+
+def cost_score(y, p, cost=COST):
+    return 1 - float(np.mean([cost[a].get(b, INVALID_COST) for a, b in zip(y, p)]))
 
 def score_run(lab, pred):
     y = lab.expected_action; p = pred.reindex(lab.index).fillna("MISSING")
@@ -98,6 +114,7 @@ def main():
     ap.add_argument("--inputs", default="benchmark_inputs.csv"); ap.add_argument("--labels", default="benchmark_labels.csv")
     ap.add_argument("--meta", default="benchmark_meta.csv"); ap.add_argument("--pred", nargs="*", default=[])
     ap.add_argument("--out", default="results_summary.csv"); ap.add_argument("--confusion", action="store_true")
+    ap.add_argument("--sensitivity", action="store_true", help="비용 가중치 세트별 cost_score와 순위 출력")
     a = ap.parse_args()
     inp = pd.read_csv(a.inputs).set_index("case_id")
     meta = pd.read_csv(a.meta, dtype={"pair_id": str}).set_index("case_id")
@@ -125,6 +142,15 @@ def main():
         print(tt.map(lambda v: f"{v:.2f}").to_string())
         res = res.join(tt)
     res.to_csv(a.out, encoding="utf-8-sig")
+    if a.sensitivity:
+        y = lab.expected_action
+        rows = {}
+        for n, p in first.items():
+            p = p.reindex(lab.index).fillna("MISSING")
+            rows[n if n in BASELINES else os.path.splitext(os.path.basename(n))[0]] = {k: cost_score(y, p, c) for k, c in COST_SETS.items()}
+        sens = pd.DataFrame(rows).T
+        print("\n[비용 가중치 민감도] 각 세트의 cost_score (괄호 = 순위, 첫 번째 run 기준)")
+        print(sens.apply(lambda s: s.map(lambda v: f"{v:.2f}") + " (" + s.rank(ascending=False, method="min").astype(int).astype(str) + ")").to_string())
     if a.confusion:
         for n, p in first.items():
             print(f"\n[{n}] 행=정답, 열=예측"); print(pd.crosstab(lab.expected_action, p).reindex(index=ACTIONS, columns=ACTIONS + ["MISSING"], fill_value=0).loc[:, lambda x: x.sum() > 0].to_string())
