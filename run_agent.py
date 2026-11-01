@@ -22,10 +22,11 @@ SYSTEM_PROMPT = """너는 ScrollGuard, 사용자의 스마트폰 사용 맥락�
 출력은 JSON 한 줄만: {"action": "<위 셋 중 하나>", "reason": "<근거 1~2문장>"}"""
 
 FIELDS = [("time_of_day", "현재 시각"), ("entry_trigger", "진입 계기"), ("app_type", "앱 유형"),
-          ("user_stated_goal", "사용자가 선언한 목표"), ("recent_context", "최근 맥락"),
+          ("user_stated_goal", "사용자가 선언한 목표"), ("user_state", "사용자 상태"), ("recent_context", "최근 맥락(관찰 기록)"),
           ("usage_minutes", "최근 60분 사용 시간(분)"), ("usage_sessions", "세션 수"),
           ("median_session_sec", "중앙 세션 길이(초)"), ("usage_quadratic", "사용 집중도(0~1)"),
-          ("swipe_interval_cv", "스와이프 간격 변동계수(낮을수록 일정)"), ("avg_dwell_sec", "콘텐츠당 평균 체류(초)")]
+          ("swipe_interval_cv", "스와이프 간격 변동계수(낮을수록 일정)"), ("avg_dwell_sec", "콘텐츠당 평균 체류(초)"),
+          ("self_reported_mood", "기분 자기보고(1~6, 높을수록 좋음)"), ("typical_usage_minutes", "이 사용자의 평소 1시간 사용량 중앙값(분)")]
 
 
 SYSTEM_PROMPT_EN = """You are ScrollGuard, an intent-aware agent that decides whether to intervene based on the context of a user's smartphone use.
@@ -41,11 +42,12 @@ Unnecessary intervention damages trust and is costly, but missing clear autopilo
 Output only one line of JSON: {"action": "<one of the three above>", "reason": "<1-2 sentences of reasoning>"}"""
 
 FIELDS_EN = [("time_of_day", "Current time"), ("entry_trigger", "Entry trigger"), ("app_type", "App type"),
-             ("user_stated_goal", "User-stated goal"), ("recent_context", "Recent context"),
+             ("user_stated_goal", "User-stated goal"), ("user_state", "User state"), ("recent_context", "Recent context (observation log)"),
              ("usage_minutes", "Usage in the last 60 minutes (min)"), ("usage_sessions", "Number of sessions"),
              ("median_session_sec", "Median session length (sec)"), ("usage_quadratic", "Usage concentration (0-1)"),
              ("swipe_interval_cv", "Swipe interval coefficient of variation (lower = more uniform)"),
-             ("avg_dwell_sec", "Average dwell per item (sec)")]
+             ("avg_dwell_sec", "Average dwell per item (sec)"),
+             ("self_reported_mood", "Self-reported mood (1-6, higher = better)"), ("typical_usage_minutes", "This user's typical usage per hour, median (min)")]
 
 def build_user_message(row, lang="ko"):
     en = lang == "en"

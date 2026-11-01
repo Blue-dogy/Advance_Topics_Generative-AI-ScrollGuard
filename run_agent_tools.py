@@ -27,7 +27,7 @@ Do not judge by usage time alone. Do not disturb intentional use, and intervene 
 At first you only see basic usage data. You can call tools to gather more evidence before deciding:
 - get_touch_log: args {} -> the user's recent swipe intervals in seconds (empty if the app has no scrolling)
 - compute_stats: args {"values": [numbers]} -> n, mean, median, std, cv (coefficient of variation), min, max
-- get_user_context: args {} -> the user's stated goal and recent in-app behavior
+- get_user_context: args {} -> the user's stated goal, current state (who, where, what kind of day), self-reported mood and recent in-app behavior
 
 Final actions (choose exactly one):
 - no_intervention: Intentional or normal use. Do nothing.
@@ -47,7 +47,7 @@ SYSTEM_KO = """너는 ScrollGuard, 사용자의 스마트폰 사용에 개입할
 처음에는 기본 사용 정보만 보인다. 결정 전에 도구를 호출해 근거를 더 모을 수 있다.
 - get_touch_log: args {} -> 최근 스와이프 간격(초) 리스트 (스크롤이 없는 앱이면 빈 리스트)
 - compute_stats: args {"values": [숫자들]} -> n, mean, median, std, cv(변동계수), min, max
-- get_user_context: args {} -> 사용자가 선언한 목표와 최근 앱 내 행동
+- get_user_context: args {} -> 사용자가 선언한 목표, 현재 상태(누구인지·어디서·어떤 날인지), 기분 자기보고, 최근 앱 내 행동
 
 최종 행동(정확히 하나):
 - no_intervention: 의도적이거나 정상적인 사용. 아무것도 하지 않는다.
@@ -63,10 +63,12 @@ SYSTEM_KO = """너는 ScrollGuard, 사용자의 스마트폰 사용에 개입할
 
 OBS = {"en": [("time_of_day", "Current time"), ("entry_trigger", "Entry trigger"), ("app_type", "App type"),
               ("usage_minutes", "Usage in the last 60 minutes (min)"), ("usage_sessions", "Number of sessions"),
-              ("median_session_sec", "Median session length (sec)"), ("usage_quadratic", "Usage concentration (0-1)")],
+              ("median_session_sec", "Median session length (sec)"), ("usage_quadratic", "Usage concentration (0-1)"),
+              ("typical_usage_minutes", "This user's typical usage per hour, median (min)")],
        "ko": [("time_of_day", "현재 시각"), ("entry_trigger", "진입 계기"), ("app_type", "앱 유형"),
               ("usage_minutes", "최근 60분 사용 시간(분)"), ("usage_sessions", "세션 수"),
-              ("median_session_sec", "중앙 세션 길이(초)"), ("usage_quadratic", "사용 집중도(0~1)")]}
+              ("median_session_sec", "중앙 세션 길이(초)"), ("usage_quadratic", "사용 집중도(0~1)"),
+              ("typical_usage_minutes", "이 사용자의 평소 1시간 사용량 중앙값(분)")]}
 
 def first_message(row, lang):
     lines = [f"- {name}: {row[col]}" for col, name in OBS[lang]]
@@ -90,7 +92,9 @@ def run_tool(name, args, row, touch, lang):
                 "min": float(x.min()), "max": float(x.max())}
     if name == "get_user_context":
         none = "(none)" if lang == "en" else "(없음)"
-        return {"user_stated_goal": row["user_stated_goal"] or none, "recent_context": row["recent_context"] or none}
+        return {"user_stated_goal": row["user_stated_goal"] or none, "user_state": row["user_state"] or none,
+                "self_reported_mood_1to6": None if pd.isna(row["self_reported_mood"]) else row["self_reported_mood"],
+                "recent_context": row["recent_context"] or none}
     return {"error": f"unknown tool '{name}'. Available: {', '.join(TOOLS)}"}
 
 def call_llm(system, messages, a):
@@ -159,7 +163,7 @@ def main():
     a = ap.parse_args()
 
     df = pd.read_csv(a.inputs)
-    for c in ["user_stated_goal", "recent_context"]:
+    for c in ["user_stated_goal", "user_state", "recent_context"]:
         df[c] = df[c].fillna("")
     touch = json.load(open(a.touch, encoding="utf-8"))
     missing = set(df.case_id) - set(touch)

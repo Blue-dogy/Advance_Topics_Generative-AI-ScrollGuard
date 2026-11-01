@@ -10,7 +10,7 @@ import pandas as pd
 # (user_stated_goal, recent_context, label_rationale) - build_benchmark.py의 CASES와 같은 순서
 EN = [
  # ---- no_intervention (18) ----
- ("Watching lectures to prepare for the operating systems midterm", "Entry: searched 'OS paging lecture' and opened a playlist | In app: watched 4 lectures in playlist order at 2x speed, rewound a section 7 times | App switches: notes app 3 times (2-4 min each) | Interactions: searches 1, saves 0, likes 0, comments 0 | Schedule/settings: shows the operating systems midterm on 11/05", "Long, but behavior matches the stated goal"),
+ ("Watching lectures to prepare for the operating systems midterm", "Entry: searched 'OS paging lecture' and opened a playlist | In app: watched 4 lectures in playlist order at 2x speed, rewound a section 7 times | App switches: notes app 3 times (2-4 min each) | Interactions: searches 1, saves 0, likes 0, comments 0 | Schedule/settings: operating systems midterm on 11/05", "Long, but behavior matches the stated goal"),
  ("", "Entry: opened the e-book app from the home screen | In app: resumed reading at page 312, turned pages every 1-3 minutes, underlined 2 passages | App switches: — | Interactions: searches 0, saves 0, likes 0, comments 0 | Schedule/settings: 18:00 gym", "Reading app, self-directed use"),
  ("Checking a soybean paste stew recipe", "Entry: searched 'soybean paste stew recipe' | In app: 2 searches, watched 3 recipe videos, paused 4 times at the ingredient list, closed the app after the last video | App switches: notes app 1 time (wrote an ingredient list) | Interactions: searches 2, saves 0, likes 0, comments 0 | Schedule/settings: 14:00 class", "Search, goal achieved, exit"),
  ("", "Entry: opened the map app from the home screen | In app: searched the destination 'engineering building', started walking directions, closed the app | App switches: — | Interactions: searches 1, saves 0, likes 0, comments 0 | Schedule/settings: 09:00 class", "Short utility use"),
@@ -19,10 +19,10 @@ EN = [
  ("Organizing a trip photo album and sharing it with friends", "Entry: opened directly | In app: uploaded 14 photos, wrote captions 5 times, 9 replies to comments, feed scrolling between uploads under 1 min each | App switches: gallery app 4 times (choosing photos) | Interactions: searches 0, saves 0, likes 0, comments 9 | Schedule/settings: 19:00 dinner", "Social media and long duration, but productive activity"),
  ("Watching a conference presentation video", "Entry: searched 'CHI 2026 talk' | In app: playing 1 video continuously (runtime 52 min, now at {m} min), paused 4 times, turned on subtitles | App switches: document app 2 times (taking notes) | Interactions: searches 1, saves 0, likes 0, comments 0 | Schedule/settings: lab meeting today 15:00", "Purposeful despite high usage concentration"),
  ("Checking the group chat before the team project deadline", "Entry: opened directly from the home screen | In app: opened the app {s} times, read 23 messages in the team project group chat, sent 6 messages, shared 2 files | App switches: alternated with a shared document app, 4 document edits recorded | Interactions: searches 0, saves 0, likes 0, comments 0 | Schedule/settings: team project due today 12:00", "Many sessions, but carrying out a task"),
- ("Comparing prices of a laptop added to the cart yesterday", "Entry: tapped a price-drop notification | In app: viewed a spec comparison of 3 items in the cart, read 6 reviews, paid for 1 and closed the app | App switches: card company app 1 time (payment verification) | Interactions: searches 0, saves 0, likes 0, comments 0 | Schedule/settings: tomorrow 10:00", "Clear task completed"),
+ ("Comparing prices of a laptop added to the cart yesterday", "Entry: tapped a price-drop notification | In app: viewed a spec comparison of 3 items in the cart, read 6 reviews, paid for 1 and closed the app | App switches: card company app 1 time (payment verification) | Interactions: searches 0, saves 0, likes 0, comments 0 | Schedule/settings: class tomorrow 10:00", "Clear task completed"),
  ("Watching reference videos for an assignment due tomorrow, then going to bed", "Entry: searched 'machine learning assignment regularization example' | In app: 4 searches, watched 5 videos (all titles about regularization), paused 9 times | App switches: notes app 5 times (code notes) | Interactions: searches 4, saves 0, likes 0, comments 0 | Schedule/settings: assignment due tomorrow 09:00, bedtime goal 01:00", "Late night and long duration, but purposeful"),
  ("", "Entry: started together with a workout in a running app | In app: played 1 podcast episode, screen off 92% of the time | App switches: running app recording in progress (5.2 km) | Interactions: searches 0, saves 0, likes 0, comments 0 | Schedule/settings: 19:30 dinner", "No screen consumption"),
- ("Searching restaurant reviews for a weekend gathering and then making a reservation", "Entry: searched 'Seongsu brunch' | In app: 3 searches by area name, read 11 review posts, saved 2 posts | App switches: reservation app 1 time, booked Saturday 11:30 for 4 people | Interactions: searches 3, saves 2, likes 0, comments 0 | Schedule/settings: gathering added to the on Saturday 11:30", "Using social media as a search tool"),
+ ("Searching restaurant reviews for a weekend gathering and then making a reservation", "Entry: searched 'Seongsu brunch' | In app: 3 searches by area name, read 11 review posts, saved 2 posts | App switches: reservation app 1 time, booked Saturday 11:30 for 4 people | Interactions: searches 3, saves 2, likes 0, comments 0 | Schedule/settings: gathering scheduled for Saturday 11:30", "Using social media as a search tool"),
  ("Declared directly: it is a day off, so planning to watch one movie", "Entry: opened directly | In app: playing 1 movie (runtime 128 min, now at {m} min), paused 1 time | App switches: — | Interactions: searches 0, saves 0, likes 0, comments 0 | Schedule/settings: user turned on focus mode, class tomorrow 10:00", "Respect the user's explicit declaration"),
  ("Checking email on the commute", "Entry: opened directly | In app: opened the mail app {s} times, about 10 seconds each, checked new mail in the inbox and replied to 1 | App switches: subway map app 2 times | Interactions: searches 0, saves 0, likes 0, comments 0 | Schedule/settings: location status moving, work starts 09:00", "Utility use while in transit"),
  ("Studying Spanish expressions with short videos", "Entry: searched 'everyday Spanish expressions' | In app: watched 17 short videos, paused on each, saved 8 | App switches: quiz app 2 times (entering words) | Interactions: searches 1, saves 8, likes 0, comments 0 | Schedule/settings: Spanish class 13:00", "Short-form video, but learning behavior"),
@@ -125,20 +125,25 @@ for i, (c, en) in enumerate(zip(CASES, EN)):                       # 순서·내
         assert (ph in ctx_ko) == (ph in en[1]), f"{ph} 불일치 case {i}"
 
 def rx(t): return re.compile("^" + re.escape(t).replace(re.escape("{m}"), r"(?P<m>\d+)").replace(re.escape("{s}"), r"(?P<s>\d+)") + "$")
-pats = [(rx(c[7]), c[6]) for c in CASES]
+pats = [rx(c[7]) for c in CASES]
+import user_states as US
+for i in range(len(CASES)):                                       # 사용자 상태·목표 번역의 숫자 일치 점검
+    assert digits(US.PERSONA[i][0]) == digits(US.PERSONA[i][1]), f"persona 숫자 불일치 case {i}"
+    assert digits(US.goal(i, "ko")) == digits(US.goal(i, "en")), f"goal 숫자 불일치 case {i}"
 
 inp = pd.read_csv("benchmark_inputs.csv"); meta = pd.read_csv("benchmark_meta.csv").set_index("case_id")
-goals, ctxs, whys = [], [], []
+goals, ctxs, whys, states = [], [], [], []
 for r in inp.itertuples():
-    goal_ko = "" if pd.isna(r.user_stated_goal) else r.user_stated_goal
-    hits = [(i, p.match(r.recent_context)) for i, (p, g) in enumerate(pats) if g == goal_ko and p.match(r.recent_context)]
+    hits = [(i, p.match(r.recent_context)) for i, p in enumerate(pats) if p.match(r.recent_context)]
+    if len(hits) > 1:   # 반례 쌍은 맥락이 같으므로 목표 문장으로 구분 (쌍은 목표도 같아 어느 쪽이든 같은 번역)
+        hits = [h for h in hits if US.goal(h[0], "ko") == r.user_stated_goal][:1]
     assert len(hits) == 1, f"{r.case_id}: 매칭 {len(hits)}건"
     i, m = hits[0]
-    goals.append(EN[i][0])
+    goals.append(US.goal(i, "en")); states.append(US.PERSONA[i][1])
     ctxs.append(EN[i][1].format(**m.groupdict()))
     whys.append(EN[i][2])
 
-en = inp.copy(); en["user_stated_goal"] = goals; en["recent_context"] = ctxs
+en = inp.copy(); en["user_stated_goal"] = goals; en["recent_context"] = ctxs; en["user_state"] = states
 en.to_csv("benchmark_inputs_en.csv", index=False, encoding="utf-8-sig")
 me = meta.copy(); me["label_rationale"] = whys; me.reset_index().to_csv("benchmark_meta_en.csv", index=False, encoding="utf-8-sig")
 ann = en.copy(); ann["annotator_action"] = ""; ann.to_csv("annotation_sheet_en.csv", index=False, encoding="utf-8-sig")

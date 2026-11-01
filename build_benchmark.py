@@ -1,5 +1,5 @@
 """
-build_benchmark.py  (v3)  -  ScrollGuard 벤치마크 81개 생성, 맥락은 관찰 로그 형식 (기존 45개 + 제스처 반례 쌍 12개 + 지름길 반례 24개)
+build_benchmark.py  (v3.1)  -  ScrollGuard 벤치마크 81개 생성, 맥락은 관찰 로그 형식 + 사용자 상태 (기존 45개 + 제스처 반례 쌍 12개 + 지름길 반례 24개)
  1) 시나리오 문장에서 '정답을 말해 주는 서술'을 제거하고 관측 가능한 단서만 남김
  2) 숫자 4개(분/세션/중앙세션/집중도)는 micro_datasetA.csv의 실제 행에서 추출
  3) 반례(adversarial)·경계(boundary) 사례를 의도적으로 포함
@@ -40,7 +40,7 @@ CASES = [
  ("long","16:00","self_open","sns_feed",0.90,40,"여행 사진 앨범 정리 후 친구들과 공유","진입: 직접 실행 / 앱 안: 사진 14장 업로드, 캡션 작성 5회, 댓글 답글 9개, 업로드 사이 피드 스크롤은 각 1분 미만 / 앱 전환: 갤러리 앱 4회(사진 선택) / 상호작용: 검색 0, 저장 0, 좋아요 0, 댓글 9 / 일정·설정: 19:00 저녁 약속",IN,NO,"adversarial","SNS+긴 시간이지만 생산 활동"),
  ("long_conc","10:00","search","long_video",1.30,600,"학회 발표 영상 시청","진입: 검색어 'CHI 2026 발표' 입력 / 앱 안: 영상 1개를 이어서 재생 중(러닝타임 52분, 현재 {m}분 지점), 일시정지 4회, 자막 켬 / 앱 전환: 문서 앱 2회(메모 작성) / 상호작용: 검색 1, 저장 0, 좋아요 0, 댓글 0 / 일정·설정: 오늘 15:00 연구실 미팅",IN,NO,"adversarial","사용 집중도 높아도 목적적"),
  ("frag","09:30","self_open","messenger",nan,nan,"조별과제 마감 전 단톡 확인","진입: 홈 화면에서 직접 실행 / 앱 안: 앱 {s}회 실행, 조별과제 단체방 메시지 23개 열람, 메시지 6개 전송, 파일 2개 공유 / 앱 전환: 공유 문서 앱과 번갈아 사용, 문서 편집 기록 4건 / 상호작용: 검색 0, 저장 0, 좋아요 0, 댓글 0 / 일정·설정: 오늘 12:00 조별과제 마감",IN,NO,"adversarial","세션 많지만 과업 수행"),
- ("mid","19:00","notification","shopping",0.80,50,"어제 담아둔 노트북 가격 비교","진입: 가격 하락 알림 탭 / 앱 안: 장바구니 상품 3개 사양 비교표 열람, 리뷰 6개 열람, 1개 결제 후 앱 종료 / 앱 전환: 카드사 앱 1회(결제 인증) / 상호작용: 검색 0, 저장 0, 좋아요 0, 댓글 0 / 일정·설정: 내일 10:00",IN,NO,"standard","명확한 과업 완료"),
+ ("mid","19:00","notification","shopping",0.80,50,"어제 담아둔 노트북 가격 비교","진입: 가격 하락 알림 탭 / 앱 안: 장바구니 상품 3개 사양 비교표 열람, 리뷰 6개 열람, 1개 결제 후 앱 종료 / 앱 전환: 카드사 앱 1회(결제 인증) / 상호작용: 검색 0, 저장 0, 좋아요 0, 댓글 0 / 일정·설정: 내일 10:00 수업",IN,NO,"standard","명확한 과업 완료"),
  ("long","23:30","search","long_video",1.00,220,"내일 제출할 과제 참고 영상 시청 후 취침","진입: 검색어 '머신러닝 과제 정규화 예제' 입력 / 앱 안: 검색 4회, 영상 5개 시청(제목 모두 정규화 관련), 일시정지 9회 / 앱 전환: 노트 앱 5회(코드 메모) / 상호작용: 검색 4, 저장 0, 좋아요 0, 댓글 0 / 일정·설정: 내일 09:00 과제 마감, 취침 목표 01:00",IN,NO,"adversarial","심야·장시간이지만 목적적"),
  ("mid","17:30","self_open","podcast",nan,nan,"","진입: 러닝 앱에서 운동 시작과 함께 실행 / 앱 안: 팟캐스트 에피소드 1개 재생, 화면 꺼짐 상태 비율 92% / 앱 전환: 러닝 앱 기록 진행 중(5.2km) / 상호작용: 검색 0, 저장 0, 좋아요 0, 댓글 0 / 일정·설정: 19:30 저녁",IN,NO,"standard","화면 소비 없음"),
  ("mid","20:10","search","sns_feed",0.60,35,"주말 모임 맛집 후기 검색 후 예약","진입: 검색어 '성수 브런치' 입력 / 앱 안: 지역명 검색 3회, 후기 게시물 11개 열람, 게시물 2개 저장 / 앱 전환: 예약 앱 1회, 토요일 11:30 4명 예약 완료 / 상호작용: 검색 3, 저장 2, 좋아요 0, 댓글 0 / 일정·설정: 토요일 11:30 모임 등록",IN,NO,"standard","SNS를 검색 도구로 사용"),
@@ -91,6 +91,7 @@ for i, (tier, t, trig, app, cv, dwell, goal, ctx, intent, action, ctype, why) in
     minutes = round(r.Usage_sum_duration / 60, 1)
     rows.append(dict(
         time_of_day=t, entry_trigger=trig, app_type=app, user_stated_goal=goal,
+        spec=i,
         recent_context=ctx.format(m=int(round(minutes)), s=int(r.Usage_num_int_all)),
         usage_minutes=minutes, usage_sessions=int(r.Usage_num_int_all),
         median_session_sec=round(r.Usage_median_duration, 1), usage_quadratic=round(r.Usage_quadratic, 3),
@@ -118,13 +119,14 @@ CF_PAIRS = [
 ]
 rng_cf = np.random.default_rng(SEED + 1)
 cf_rows = []
-for pid, tier, t, trig, app, goal, ctx, intent, action, why, ga, gb in CF_PAIRS:
+for j, (pid, tier, t, trig, app, goal, ctx, intent, action, why, ga, gb) in enumerate(CF_PAIRS):
     pool = data.query(TIERS[tier]); pool = pool[~pool.index.isin(used)]
     idx = rng_cf.choice(pool.index.values); used.add(idx); r = data.loc[idx]
     minutes = round(r.Usage_sum_duration / 60, 1)
     for variant, (cv, dwell) in (("a", ga), ("b", gb)):
         cf_rows.append(dict(
             time_of_day=t, entry_trigger=trig, app_type=app, user_stated_goal=goal,
+            spec=len(CASES) + j,
             recent_context=ctx.format(m=int(round(minutes)), s=int(r.Usage_num_int_all)),
             usage_minutes=minutes, usage_sessions=int(r.Usage_num_int_all),
             median_session_sec=round(r.Usage_median_duration, 1), usage_quadratic=round(r.Usage_quadratic, 3),
@@ -174,12 +176,13 @@ SC_CASES = [
 ]
 rng_sc = np.random.default_rng(SEED + 2)
 sc_rows = []
-for tier, t, trig, app, cv, dwell, goal, ctx, intent, action, ctype, why in SC_CASES:
+for j, (tier, t, trig, app, cv, dwell, goal, ctx, intent, action, ctype, why) in enumerate(SC_CASES):
     pool = data.query(TIERS[tier]); pool = pool[~pool.index.isin(used)]
     idx = rng_sc.choice(pool.index.values); used.add(idx); r = data.loc[idx]
     minutes = round(r.Usage_sum_duration / 60, 1)
     sc_rows.append(dict(
         time_of_day=t, entry_trigger=trig, app_type=app, user_stated_goal=goal,
+        spec=len(CASES) + len(CF_PAIRS) + j,
         recent_context=ctx.format(m=int(round(minutes)), s=int(r.Usage_num_int_all)),
         usage_minutes=minutes, usage_sessions=int(r.Usage_num_int_all),
         median_session_sec=round(r.Usage_median_duration, 1), usage_quadratic=round(r.Usage_quadratic, 3),
@@ -192,9 +195,25 @@ sc = pd.DataFrame(sc_rows).sample(frac=1, random_state=SEED).reset_index(drop=Tr
 sc.insert(0, "case_id", [f"S{len(df)+i+1:03d}" for i in range(len(sc))])
 df = pd.concat([df, sc], ignore_index=True)
 
-input_cols = ["case_id", "time_of_day", "entry_trigger", "app_type", "user_stated_goal", "recent_context",
+# ---------------- 사용자 상태 (v3.1) ----------------
+# user_stated_goal: 사용자가 ScrollGuard 목표 질문에 입력한 문장(비어 있으면 그 이유), user_state: 누구인지·어떤 날인지·지금 어디서 무엇을 하는지
+# self_reported_mood: 원본 행의 실제 기분 자기보고(valence, 1~6), typical_usage_minutes: 같은 사용자의 다른 측정 기록에서 구한 1시간 사용량 중앙값(실제 값)
+import user_states as US
+df["user_stated_goal"] = [US.goal(k, "ko") for k in df.spec]
+df["user_state"] = [US.PERSONA[k][0] for k in df.spec]
+by_user = data.groupby("user_id")
+mood, typical = [], []
+for u, q in zip(df.src_user_id, df.src_questionnaire_id):
+    g = by_user.get_group(u)
+    mood.append(g.loc[g.es_questionnaire_id == q, "valence"].iloc[0])
+    other = g[g.es_questionnaire_id != q]
+    typical.append(round(other.Usage_sum_duration.median() / 60, 1))
+df["self_reported_mood"] = mood
+df["typical_usage_minutes"] = typical
+
+input_cols = ["case_id", "time_of_day", "entry_trigger", "app_type", "user_stated_goal", "user_state", "recent_context",
               "usage_minutes", "usage_sessions", "median_session_sec", "usage_quadratic",
-              "swipe_interval_cv", "avg_dwell_sec"]
+              "swipe_interval_cv", "avg_dwell_sec", "self_reported_mood", "typical_usage_minutes"]
 label_cols = ["case_id", "user_intent", "intervention_needed", "expected_action"]
 meta_cols = ["case_id", "case_type", "label_rationale", "src_user_id", "src_questionnaire_id", "pair_id"]
 enc = "utf-8-sig"

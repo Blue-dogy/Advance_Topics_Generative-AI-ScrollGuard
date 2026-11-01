@@ -55,7 +55,8 @@ def base_text_words(d, y):
     """B4 (진단용): 문장 속 단어만 보는 나이브 베이즈. 각 사례는 그 사례를 뺀 나머지로 학습(leave-one-out).
     정답을 보고 학습하므로 공정한 경쟁 상대가 아니라 '문장 표현에 정답 단서가 얼마나 남았는가'를 재는 진단 도구다."""
     import re
-    toks = [re.findall(r"[a-z가-힣]+", f"{g} {c}".lower()) for g, c in zip(d.user_stated_goal.fillna(""), d.recent_context.fillna(""))]
+    us = d.user_state.fillna("") if "user_state" in d else pd.Series("", index=d.index)
+    toks = [re.findall(r"[a-z가-힣]+", f"{g} {s} {c}".lower()) for g, s, c in zip(d.user_stated_goal.fillna(""), us, d.recent_context.fillna(""))]
     vocab = sorted({w for t in toks for w in t}); ix = {w: i for i, w in enumerate(vocab)}
     X = np.zeros((len(toks), len(vocab)))
     for r, t in enumerate(toks):
