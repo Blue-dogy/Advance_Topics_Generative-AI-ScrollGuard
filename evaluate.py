@@ -51,6 +51,30 @@ BASELINES = {"B0_always_no_intervention": base_none, "B0_always_gentle_prompt": 
              "B0_always_ask_context": base_ask, "B1_time_threshold_30min": base_threshold,
              "B2_feature_rule_no_text": base_feature_rule, "B3_swipe_cv_lt_0.6": base_swipe_cv}
 
+def base_text_words(d, y):
+    """B4 (진단용): 문장 속 단어만 보는 나이브 베이즈. 각 사례는 그 사례를 뺀 나머지로 학습(leave-one-out).
+    정답을 보고 학습하므로 공정한 경쟁 상대가 아니라 '문장 표현에 정답 단서가 얼마나 남았는가'를 재는 진단 도구다."""
+    import re
+    toks = [re.findall(r"[a-z가-힣]+", f"{g} {c}".lower()) for g, c in zip(d.user_stated_goal.fillna(""), d.recent_context.fillna(""))]
+    vocab = sorted({w for t in toks for w in t}); ix = {w: i for i, w in enumerate(vocab)}
+    X = np.zeros((len(toks), len(vocab)))
+    for r, t in enumerate(toks):
+        for w in t:
+            X[r, ix[w]] += 1
+    yv = y.reindex(d.index).values; out = []
+    for r in range(len(toks)):
+        tr = np.arange(len(toks)) != r; best, arg = -np.inf, ACTIONS[0]
+        for a in ACTIONS:
+            m = tr & (yv == a)
+            if not m.any():
+                continue
+            cnt = X[m].sum(0) + 1.0
+            score = np.log(m.sum() / tr.sum()) + (X[r] * np.log(cnt / cnt.sum())).sum()
+            if score > best:
+                best, arg = score, a
+        out.append(arg)
+    return pd.Series(out, index=d.index)
+
 # ---------------- 지표 ----------------
 def macro_f1(y, p):
     f = []
@@ -123,6 +147,7 @@ def main():
     table = {}; first = {}; tools = {}
     for name, fn in BASELINES.items():
         table[name], first[name] = evaluate(lab, [fn(inp)])
+    table["B4_text_words_LOO"], first["B4_text_words_LOO"] = evaluate(lab, [base_text_words(inp, lab.expected_action)])
     for path in a.pred:
         d = pd.read_csv(path); d["run"] = d["run"] if "run" in d else 0
         runs = [g.set_index("case_id")["action"].astype(str).str.strip() for _, g in d.groupby("run")]
@@ -147,7 +172,7 @@ def main():
         rows = {}
         for n, p in first.items():
             p = p.reindex(lab.index).fillna("MISSING")
-            rows[n if n in BASELINES else os.path.splitext(os.path.basename(n))[0]] = {k: cost_score(y, p, c) for k, c in COST_SETS.items()}
+            rows[n if (n in BASELINES or n.startswith("B4")) else os.path.splitext(os.path.basename(n))[0]] = {k: cost_score(y, p, c) for k, c in COST_SETS.items()}
         sens = pd.DataFrame(rows).T
         print("\n[비용 가중치 민감도] 각 세트의 cost_score (괄호 = 순위, 첫 번째 run 기준)")
         print(sens.apply(lambda s: s.map(lambda v: f"{v:.2f}") + " (" + s.rank(ascending=False, method="min").astype(int).astype(str) + ")").to_string())
