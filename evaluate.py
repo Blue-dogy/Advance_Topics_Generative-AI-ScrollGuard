@@ -165,7 +165,7 @@ def main():
     if tools:
         tt = pd.DataFrame(tools).T
         print("\n[터치 트랙 도구 사용] context_check_rate=맥락 도구를 부른 비율, acc_with/without_context=맥락 확인 여부별 정확도")
-        print(tt.map(lambda v: f"{v:.2f}").to_string())
+        print(tt.apply(lambda c: c.map(lambda v: f"{v:.2f}")).to_string())
         res = res.join(tt)
     res.to_csv(a.out, encoding="utf-8-sig")
     if a.sensitivity:

@@ -25,13 +25,13 @@ SYSTEM_EN = """You are ScrollGuard, an intent-aware agent that decides whether t
 Do not judge by usage time alone. Do not disturb intentional use, and intervene gently only when the user appears to be on autopilot (mindless scrolling).
 
 At first you only see basic usage data. You can call tools to gather more evidence before deciding:
-- get_touch_log: args {} -> the user's recent swipe intervals in seconds (empty if the app has no scrolling)
+- get_touch_log: args {} -> the user's recent swipes: intervals (sec), speed (px/s) and direction (up = forward, down = back); empty if the app has no scrolling
 - compute_stats: args {"values": [numbers]} -> n, mean, median, std, cv (coefficient of variation), min, max
 - get_user_context: args {} -> the user's stated goal, current state (who, where, what kind of day), self-reported mood and recent in-app behavior
 
 Final actions (choose exactly one):
 - no_intervention: Intentional or normal use. Do nothing.
-- gentle_prompt: Judged as autopilot use. Show a gentle check-in message without forcing a block.
+- gentle_prompt: Judged as autopilot use. Without forcing a block, fade the screen to grayscale and show a small pop-up or TTS check-in. The user can always continue.
 - ask_context: Signals conflict or information needed to decide is missing. Ask the user what they are trying to do first.
 Unnecessary intervention damages trust and is costly, but missing clear autopilot use is also costly.
 
@@ -45,13 +45,13 @@ SYSTEM_KO = """너는 ScrollGuard, 사용자의 스마트폰 사용에 개입할
 사용 시간만으로 판단하지 말고, 의도적 사용을 방해하지 않으면서 자동조종(무의식적 스크롤) 상태일 때만 부드럽게 개입한다.
 
 처음에는 기본 사용 정보만 보인다. 결정 전에 도구를 호출해 근거를 더 모을 수 있다.
-- get_touch_log: args {} -> 최근 스와이프 간격(초) 리스트 (스크롤이 없는 앱이면 빈 리스트)
+- get_touch_log: args {} -> 최근 스와이프의 간격(초), 속도(px/s), 방향(up = 다음, down = 뒤로). 스크롤이 없는 앱이면 빈 기록
 - compute_stats: args {"values": [숫자들]} -> n, mean, median, std, cv(변동계수), min, max
 - get_user_context: args {} -> 사용자가 선언한 목표, 현재 상태(누구인지·어디서·어떤 날인지), 기분 자기보고, 최근 앱 내 행동
 
 최종 행동(정확히 하나):
 - no_intervention: 의도적이거나 정상적인 사용. 아무것도 하지 않는다.
-- gentle_prompt: 자동조종 사용으로 판단. 강제 차단 없이 부드러운 확인 메시지를 띄운다.
+- gentle_prompt: 자동조종 사용으로 판단. 강제 차단 없이 화면을 흑백으로 서서히 바꾸고 작은 팝업이나 음성(TTS)으로 확인한다. 사용자는 언제든 계속할 수 있다.
 - ask_context: 신호가 충돌하거나 판단에 필요한 정보가 부족. 지금 하려는 일을 먼저 묻는다.
 불필요한 개입은 신뢰를 해치므로 비용이 크지만, 명백한 자동조종을 놓치는 것도 비용이다.
 
@@ -79,7 +79,11 @@ def first_message(row, lang):
 def run_tool(name, args, row, touch, lang):
     if name == "get_touch_log":
         v = touch.get(row["case_id"], [])
-        return {"swipe_intervals_sec": v} if v else {"swipe_intervals_sec": [], "note": "no swipe events recorded" if lang == "en" else "스와이프 기록 없음"}
+        if isinstance(v, list):          # 이전 형식(간격 리스트만)도 읽을 수 있게
+            v = {"swipe_intervals_sec": v}
+        if v.get("swipe_intervals_sec"):
+            return v
+        return {"swipe_intervals_sec": [], "note": "no swipe events recorded" if lang == "en" else "스와이프 기록 없음"}
     if name == "compute_stats":
         try:
             x = np.array([float(t) for t in (args or {}).get("values", [])])
