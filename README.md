@@ -4,7 +4,7 @@ An evaluation benchmark for **ScrollGuard**, an intent-aware agent that breaks t
 
 The benchmark measures one decision: given a smartphone-usage situation, **should the agent intervene now?**
 
-> Special Topics on Generative AI (Agentic AI), Phase 2 · version 3.1 · 81 cases
+> Special Topics on Generative AI (Agentic AI), Phase 2 · version 3.2 · 81 cases · labels validated by 2 annotators (Cohen's kappa 0.68 between them)
 >
 > Reports: [English](docs/ScrollGuard_Phase2_Benchmark_EN.pdf) · [한국어](docs/ScrollGuard_Phase2_Benchmark_KO.pdf)
 
@@ -35,7 +35,7 @@ The benchmark evaluates the **decision layer**. The observation log is assumed t
 
 ## 2. Data
 
-81 cases: 32 `no_intervention`, 31 `gentle_prompt`, 18 `ask_context`.
+81 cases: 34 `no_intervention`, 32 `gentle_prompt`, 15 `ask_context`.
 
 | Case type | Count | Purpose |
 |---|---|---|
@@ -74,13 +74,26 @@ Real values come from the public dataset `micro_datasetA.csv` (5,777 rows). Goal
 
 | Baseline | Accuracy | False intervention | Cost score |
 |---|---|---|---|
-| B0 always `no_intervention` | 0.40 | 0.00 | 0.56 |
-| B1 intervene at 30+ minutes | 0.41 | 0.41 | 0.54 |
-| B2 feature rule, no text | **0.51** | 0.06 | **0.64** |
-| B3 swipe CV < 0.6 | 0.49 | 0.38 | 0.61 |
-| B4 word classifier (diagnostic, trained on labels) | 0.60 | 0.44 | 0.69 |
+| B0 always `no_intervention` | 0.42 | 0.00 | 0.57 |
+| B1 intervene at 30+ minutes | 0.44 | 0.41 | 0.56 |
+| B2 feature rule, no text | **0.53** | 0.06 | **0.66** |
+| B3 swipe CV < 0.6 | 0.52 | 0.35 | 0.62 |
+| B4 word classifier (diagnostic, trained on labels) | 0.63 | 0.50 | 0.69 |
 
 An agent meets the goal when it beats B2 on accuracy and cost score, keeps false_intervention low (target ≤ 0.10), asks on unclear cases (ask_recall > 0), beats B3 on counterfactual pairs, and stays valid and consistent. See the report for the full criteria.
+
+### Label validation
+
+Two people who did not design the benchmark labeled all 81 cases without seeing the answers ([guide](docs/annotation/annotation_guide_en.pdf), results in `docs/annotation/results/`).
+
+| Comparison (before adjudication) | Agreement | Cohen's kappa |
+|---|---|---|
+| Annotator A vs designers | 0.84 | 0.75 |
+| Annotator B vs designers | 0.81 | 0.71 |
+| **Annotator A vs annotator B** | 0.80 | **0.68** |
+| All three (Fleiss' kappa) | - | 0.71 |
+
+Agreement is high for `no_intervention` and `gentle_prompt` and lower for `ask_context`. Five cases where both annotators disagreed with the designers (S003, S004, S005, S066, S074) were relabeled by a 2-of-3 majority.
 
 ## 4. Quick start
 
@@ -144,7 +157,7 @@ To change a case, edit `build_benchmark.py` / `user_states.py` (and the translat
 
 ## 6. Limitations
 
-- Labels are the designers' judgment until validated by two annotators (Cohen's kappa).
+- Labels were validated by two annotators (kappa 0.68 between them), but `ask_context` has lower agreement and is the least certain category.
 - Only usage numbers, mood and typical usage are real; other signals are written or generated, and the sensing layer is assumed perfect.
 - 81 cases give a ±0.1 accuracy CI; smaller differences are not interpreted.
 - Error costs are design assumptions; report them with the sensitivity analysis.
@@ -158,7 +171,7 @@ ScrollGuard는 사용 시간만 보고 막는 잠금 앱과 달리, 맥락을 �
 - **트랙 A:** 입력 15열을 모두 보고 한 번에 결정 (`run_agent.py`)
 - **트랙 B:** 도구로 터치 기록과 맥락을 직접 조회한 뒤 결정 (`run_agent_tools.py`)
 - **채점:** `evaluate.py`가 기준선 6개와 함께 정확도, 불필요 개입률, 비용 점수, 반례 쌍 지표, 도구 사용 지표를 계산해요.
-- **라벨 검증:** 라벨러 2명이 [안내문](docs/annotation/annotation_guide.pdf)을 보고 시트를 채우면 `agreement.py`로 kappa를 계산해요.
+- **라벨 검증:** 독립 라벨러 2명이 81개를 모두 라벨링했어요. 라벨러끼리의 kappa는 0.68, 세 명 전체의 Fleiss' kappa는 0.71로 "상당한 일치"예요. 의견이 갈린 5개는 다수결로 정답을 고쳤어요.
 - **자세한 설명:** [한국어 보고서](docs/ScrollGuard_Phase2_Benchmark_KO.pdf), 파일 관계는 아래 그림을 참고하세요.
 
 ![파일 의존 관계 그래프](docs/file_graph_ko.png)
