@@ -1,9 +1,9 @@
 ﻿case_id,user_intent,intervention_needed,expected_action
 S001,unclear,uncertain,ask_context
 S002,unintended,yes,gentle_prompt
-S003,unintended,yes,gentle_prompt
-S004,unclear,uncertain,ask_context
-S005,unclear,uncertain,ask_context
+S003,unclear,uncertain,ask_context
+S004,intentional,no,no_intervention
+S005,unintended,yes,gentle_prompt
 S006,unclear,uncertain,ask_context
 S007,intentional,no,no_intervention
 S008,intentional,no,no_intervention
@@ -64,7 +64,7 @@ S062,unintended,yes,gentle_prompt
 S063,unintended,yes,gentle_prompt
 S064,unintended,yes,gentle_prompt
 S065,intentional,no,no_intervention
-S066,unclear,uncertain,ask_context
+S066,intentional,no,no_intervention
 S067,intentional,no,no_intervention
 S068,intentional,no,no_intervention
 S069,unintended,yes,gentle_prompt
@@ -72,7 +72,7 @@ S070,unintended,yes,gentle_prompt
 S071,intentional,no,no_intervention
 S072,intentional,no,no_intervention
 S073,unclear,uncertain,ask_context
-S074,unclear,uncertain,ask_context
+S074,unintended,yes,gentle_prompt
 S075,unclear,uncertain,ask_context
 S076,unclear,uncertain,ask_context
 S077,intentional,no,no_intervention
