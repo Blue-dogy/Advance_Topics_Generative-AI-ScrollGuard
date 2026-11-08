@@ -63,11 +63,11 @@ SYSTEM_KO = """너는 ScrollGuard, 사용자의 스마트폰 사용에 개입할
 
 OBS = {"en": [("time_of_day", "Current time"), ("entry_trigger", "Entry trigger"), ("app_type", "App type"),
               ("usage_minutes", "Usage in the last 60 minutes (min)"), ("usage_sessions", "Number of sessions"),
-              ("median_session_sec", "Median session length (sec)"), ("usage_quadratic", "Usage concentration (0-1)"),
+              ("median_session_sec", "Median session length (sec)"), ("usage_quadratic", "Session concentration (0-1): share of the hour's use packed into one long session, 1 = a single session; not a measure of attention"),
               ("typical_usage_minutes", "This user's typical usage per hour, median (min)")],
        "ko": [("time_of_day", "현재 시각"), ("entry_trigger", "진입 계기"), ("app_type", "앱 유형"),
               ("usage_minutes", "최근 60분 사용 시간(분)"), ("usage_sessions", "세션 수"),
-              ("median_session_sec", "중앙 세션 길이(초)"), ("usage_quadratic", "사용 집중도(0~1)"),
+              ("median_session_sec", "중앙 세션 길이(초)"), ("usage_quadratic", "세션 몰림 정도(0~1): 1시간 사용이 긴 세션 하나에 몰린 정도, 1 = 세션 1개, 주의 집중도가 아님"),
               ("typical_usage_minutes", "이 사용자의 평소 1시간 사용량 중앙값(분)")]}
 
 def first_message(row, lang):
@@ -204,11 +204,17 @@ def main():
     ap.add_argument("--max-tools", type=int, default=4, help="사례당 도구 호출 최대 횟수")
     ap.add_argument("--lang", choices=["ko", "en"], default="ko", help="프롬프트 언어 (입력 CSV 언어와 맞출 것)")
     ap.add_argument("--mock", action="store_true"); ap.add_argument("--resume", action="store_true")
+    ap.add_argument("--limit", type=int, default=0, help="시험 실행: 앞에서 N개 사례만")
+    ap.add_argument("--cases", default="", help="시험 실행: 쉼표로 구분한 case_id만 (예: S001,S039)")
     a = ap.parse_args()
 
     df = pd.read_csv(a.inputs)
     for c in ["user_stated_goal", "user_state", "recent_context"]:
         df[c] = df[c].fillna("")
+    if a.cases:
+        df = df[df.case_id.isin([c.strip() for c in a.cases.split(",")])]
+    if a.limit:
+        df = df.head(a.limit)
     touch = json.load(open(a.touch, encoding="utf-8"))
     missing = set(df.case_id) - set(touch)
     if missing:

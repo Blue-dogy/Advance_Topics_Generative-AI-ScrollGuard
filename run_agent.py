@@ -5,6 +5,8 @@ run_agent.py (v2.1) - 벤치마크 입력만 LLM에 넣고 예측을 '사례마�
   Anthropic API:   --provider anthropic --model <모델명>
   파이프라인 점검: --mock
   중간에 멈췄다면 같은 명령에 --resume 을 붙이면 이어서 진행
+  시험 실행: --limit 10 또는 --cases S001,S039 (본 실행 전에 판단 근거를 먼저 확인)
+  원문 응답은 --out과 같은 이름의 .jsonl에 저장된다. 파서를 고친 뒤에는 --reparse로 다시 실행 없이 재해석
 """
 import argparse, csv, json, os, random, re, time
 import pandas as pd
@@ -24,7 +26,7 @@ SYSTEM_PROMPT = """너는 ScrollGuard, 사용자의 스마트폰 사용 맥락�
 FIELDS = [("time_of_day", "현재 시각"), ("entry_trigger", "진입 계기"), ("app_type", "앱 유형"),
           ("user_stated_goal", "사용자가 선언한 목표"), ("user_state", "사용자 상태"), ("recent_context", "최근 맥락(관찰 기록)"),
           ("usage_minutes", "최근 60분 사용 시간(분)"), ("usage_sessions", "세션 수"),
-          ("median_session_sec", "중앙 세션 길이(초)"), ("usage_quadratic", "사용 집중도(0~1)"),
+          ("median_session_sec", "중앙 세션 길이(초)"), ("usage_quadratic", "세션 몰림 정도(0~1): 1시간 사용이 긴 세션 하나에 몰린 정도, 1 = 세션 1개, 주의 집중도가 아님"),
           ("swipe_interval_cv", "스와이프 간격 변동계수(낮을수록 일정)"), ("avg_dwell_sec", "콘텐츠당 평균 체류(초)"),
           ("self_reported_mood", "기분 자기보고(1~6, 높을수록 좋음)"), ("typical_usage_minutes", "이 사용자의 평소 1시간 사용량 중앙값(분)")]
 
@@ -44,7 +46,7 @@ Output only one line of JSON: {"action": "<one of the three above>", "reason": "
 FIELDS_EN = [("time_of_day", "Current time"), ("entry_trigger", "Entry trigger"), ("app_type", "App type"),
              ("user_stated_goal", "User-stated goal"), ("user_state", "User state"), ("recent_context", "Recent context (observation log)"),
              ("usage_minutes", "Usage in the last 60 minutes (min)"), ("usage_sessions", "Number of sessions"),
-             ("median_session_sec", "Median session length (sec)"), ("usage_quadratic", "Usage concentration (0-1)"),
+             ("median_session_sec", "Median session length (sec)"), ("usage_quadratic", "Session concentration (0-1): share of the hour's use packed into one long session, 1 = a single session; not a measure of attention"),
              ("swipe_interval_cv", "Swipe interval coefficient of variation (lower = more uniform)"),
              ("avg_dwell_sec", "Average dwell per item (sec)"),
              ("self_reported_mood", "Self-reported mood (1-6, higher = better)"), ("typical_usage_minutes", "This user's typical usage per hour, median (min)")]
@@ -116,9 +118,27 @@ def main():
     ap.add_argument("--temperature", type=float, default=0.3, help="0이면 3회 실행 결과가 같아져 일관성 측정이 무의미")
     ap.add_argument("--lang", choices=["ko", "en"], default="ko", help="프롬프트/필드 언어 (입력 CSV 언어와 맞출 것)")
     ap.add_argument("--mock", action="store_true"); ap.add_argument("--resume", action="store_true")
+    ap.add_argument("--limit", type=int, default=0, help="시험 실행: 앞에서 N개 사례만")
+    ap.add_argument("--cases", default="", help="시험 실행: 쉼표로 구분한 case_id만 (예: S001,S039)")
+    ap.add_argument("--reparse", action="store_true", help="모델을 다시 부르지 않고 저장된 원문(.jsonl)을 현재 파서로 다시 해석해 --out을 새로 쓴다")
     a = ap.parse_args()
+    raw_path = os.path.splitext(a.out)[0] + ".jsonl"   # 모델 원문 응답: 파서를 고쳐도 다시 실행하지 않고 --reparse로 재채점
+
+    if a.reparse:
+        rows = [json.loads(x) for x in open(raw_path, encoding="utf-8")]
+        with open(a.out, "w", newline="", encoding="utf-8-sig") as f:
+            w = csv.writer(f); w.writerow(["case_id", "run", "action", "reason"])
+            for r in rows:
+                act, why = (r["action"], r["reason"]) if r.get("raw") is None else parse(r["raw"])
+                w.writerow([r["case_id"], r["run"], act, why])
+        print(f"재해석 완료: {len(rows)}건 -> {a.out}")
+        return
 
     df = pd.read_csv(a.inputs); df["user_stated_goal"] = df["user_stated_goal"].fillna("")
+    if a.cases:
+        df = df[df.case_id.isin([c.strip() for c in a.cases.split(",")])]
+    if a.limit:
+        df = df.head(a.limit)
     done = set()
     if a.resume and os.path.exists(a.out):
         old = pd.read_csv(a.out)
@@ -129,22 +149,27 @@ def main():
     else:
         with open(a.out, "w", newline="", encoding="utf-8-sig") as f:
             csv.writer(f).writerow(["case_id", "run", "action", "reason"])
+        open(raw_path, "w").close()
 
     total, n, fails, t_start = len(df) * a.runs, len(done), 0, time.time()
     for run in range(a.runs):
         for r in df.to_dict("records"):
             if (r["case_id"], run) in done:
                 continue
-            t0 = time.time()
+            t0 = time.time(); raw = None
             if a.mock:
                 act = random.Random(f"{run}{r['case_id']}").choice(["no_intervention", "gentle_prompt", "ask_context"]); why = "mock"
+                raw = json.dumps({"action": act, "reason": why})
             else:
                 try:
-                    act, why = parse(call_llm(SYSTEM_PROMPT_EN if a.lang == "en" else SYSTEM_PROMPT, build_user_message(r, a.lang), a)); fails = 0
+                    raw = call_llm(SYSTEM_PROMPT_EN if a.lang == "en" else SYSTEM_PROMPT, build_user_message(r, a.lang), a)
+                    act, why = parse(raw); fails = 0
                 except Exception as e:  # 타임아웃/서버 오류: 기록하고 계속, 연속 3회면 중단
                     act, why, fails = "API_ERROR", f"{type(e).__name__}: {str(e)[:150]}", fails + 1
             with open(a.out, "a", newline="", encoding="utf-8") as f:
                 csv.writer(f).writerow([r["case_id"], run, act, why])
+            with open(raw_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps({"case_id": r["case_id"], "run": run, "action": act, "reason": why, "raw": raw}, ensure_ascii=False) + "\n")
             n += 1
             eta = (time.time() - t_start) / max(n - len(done), 1) * (total - n) / 60
             print(f"[{n}/{total}] run{run} {r['case_id']} -> {act} ({time.time()-t0:.1f}s, 남은 약 {eta:.1f}분)", flush=True)
