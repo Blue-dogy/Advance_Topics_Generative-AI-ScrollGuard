@@ -1,0 +1,21 @@
+공통 사례 30개 (정답: ask_context 15, no_intervention 8, gentle_prompt 7)
+
+                      n  accuracy  ask_recall  question_burden  false_intervention  detect_rate  asked_total  invalid
+ablation_2_aligned   30      0.47        0.00             0.00                0.00         0.86            0        0
+ablation_3_distinct  30      0.40        0.13             0.00                0.38         0.71            2        0
+
+변형에 따라 답이 바뀐 사례 12개 (NO = no_intervention, GP = gentle_prompt, AC = ask_context)
+        label ablation_2_aligned ablation_3_distinct
+case_id                                             
+S003       AC                 GP                  NO
+S006       AC                 NO                  GP
+S017       AC                 GP                  AC
+S023       GP                 NO                  GP
+S027       NO                 NO                  GP
+S031       AC                 NO                  GP
+S034       GP                 GP                  NO
+S037       NO                 NO                  GP
+S040       AC                 NO                  AC
+S047       GP                 GP                  NO
+S060       NO                 NO                  GP
+S061       AC                 GP                  NO
