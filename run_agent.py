@@ -17,8 +17,8 @@ SYSTEM_PROMPT = """너는 ScrollGuard, 사용자의 스마트폰 사용 맥락�
 
 반드시 아래 셋 중 정확히 하나를 고른다.
 - no_intervention: 의도적이거나 정상적인 사용. 아무것도 하지 않는다.
-- gentle_prompt: 자동조종 사용으로 판단. 강제 차단 없이 화면을 흑백으로 서서히 바꾸고(Grayscale Fade) 작은 팝업이나 음성(TTS)으로 지금 하려는 일을 확인한다. 사용자는 언제든 계속할 수 있다.
-- ask_context: 신호가 충돌하거나 판단에 필요한 정보가 부족. 사용자에게 지금 하려는 일을 먼저 묻는다.
+- gentle_prompt: 자동조종 사용으로 판단. 강제 차단 없이 화면을 흑백으로 서서히 바꾸고 작은 팝업이나 음성(TTS)으로 확인한다. 사용자는 언제든 계속할 수 있다.
+- ask_context: 신호가 충돌하거나 판단에 필요한 정보가 부족. 지금 하려는 일을 먼저 묻는다.
 불필요한 개입은 신뢰를 해치므로 비용이 크지만, 명백한 자동조종을 놓치는 것도 비용이다.
 
 출력은 JSON 한 줄만. 근거를 먼저 쓰고, 그 근거에서 나오는 행동을 마지막에 쓴다: {"reason": "<근거 1~2문장>", "action": "<위 셋 중 하나>"}"""
@@ -37,7 +37,7 @@ and intervene gently only when the user appears to be on autopilot (mindless scr
 
 You must choose exactly one of the following three actions.
 - no_intervention: Intentional or normal use. Do nothing.
-- gentle_prompt: Judged as autopilot use. Without forcing a block, fade the screen to grayscale and show a small pop-up or TTS check-in about what the user wants to do. The user can always continue.
+- gentle_prompt: Judged as autopilot use. Without forcing a block, fade the screen to grayscale and show a small pop-up or TTS check-in. The user can always continue.
 - ask_context: Signals conflict or information needed to decide is missing. Ask the user what they are trying to do first.
 Unnecessary intervention damages trust and is costly, but missing clear autopilot use is also costly.
 
