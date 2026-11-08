@@ -4,7 +4,7 @@ run_agent_tools.py - 터치 트랙: 도구를 써서 스스로 정보를 모으�
 run_agent.py와 달리 처음에는 시각·진입 계기·앱 유형·사용량 숫자만 보여 준다.
 터치 기록, 균일성 통계, 사용자 맥락은 에이전트가 도구를 호출해야 얻는다.
   get_touch_log()          -> 최근 스와이프 간격(초) 리스트 (touch_logs.json)
-  compute_stats(values)    -> n, mean, median, std, cv, min, max
+  compute_stats(field 또는 values) -> n, mean, median, std, cv, min, max (field를 주면 터치 기록에서 바로 계산)
   get_user_context()       -> 선언 목표, 최근 맥락
 모든 모델에 같은 조건을 주려고 네이티브 tool calling 대신 'JSON 한 줄' 프로토콜을 쓴다.
 
@@ -26,7 +26,7 @@ Do not judge by usage time alone. Do not disturb intentional use, and intervene 
 
 At first you only see basic usage data. You can call tools to gather more evidence before deciding:
 - get_touch_log: args {} -> the user's recent swipes: intervals (sec), speed (px/s) and direction (up = forward, down = back); empty if the app has no scrolling
-- compute_stats: args {"values": [numbers]} -> n, mean, median, std, cv (coefficient of variation), min, max
+- compute_stats: args {"field": "swipe_intervals_sec"} or {"field": "swipe_speed_px_per_s"} -> n, mean, median, std, cv (coefficient of variation), min, max of that touch-log field (you can also pass {"values": [numbers]})
 - get_user_context: args {} -> the user's stated goal, current state (who, where, what kind of day), self-reported mood and recent in-app behavior
 
 Final actions (choose exactly one):
@@ -46,7 +46,7 @@ SYSTEM_KO = """너는 ScrollGuard, 사용자의 스마트폰 사용에 개입할
 
 처음에는 기본 사용 정보만 보인다. 결정 전에 도구를 호출해 근거를 더 모을 수 있다.
 - get_touch_log: args {} -> 최근 스와이프의 간격(초), 속도(px/s), 방향(up = 다음, down = 뒤로). 스크롤이 없는 앱이면 빈 기록
-- compute_stats: args {"values": [숫자들]} -> n, mean, median, std, cv(변동계수), min, max
+- compute_stats: args {"field": "swipe_intervals_sec"} 또는 {"field": "swipe_speed_px_per_s"} -> 그 터치 기록 필드의 n, mean, median, std, cv(변동계수), min, max ({"values": [숫자들]}도 가능)
 - get_user_context: args {} -> 사용자가 선언한 목표, 현재 상태(누구인지·어디서·어떤 날인지), 기분 자기보고, 최근 앱 내 행동
 
 최종 행동(정확히 하나):
@@ -85,12 +85,20 @@ def run_tool(name, args, row, touch, lang):
             return v
         return {"swipe_intervals_sec": [], "note": "no swipe events recorded" if lang == "en" else "스와이프 기록 없음"}
     if name == "compute_stats":
+        args = args if isinstance(args, dict) else {}
+        log = touch.get(row["case_id"], [])
+        log = {"swipe_intervals_sec": log} if isinstance(log, list) else log
+        field = str(args.get("field", "")).strip()
+        vals = args.get("values")
+        if field or not isinstance(vals, list) or len(vals) < 2:   # 숫자를 다시 적지 않아도 되게: 필드 이름이면 터치 기록에서 계산
+            field = field if field in ("swipe_intervals_sec", "swipe_speed_px_per_s") else "swipe_intervals_sec"
+            vals = log.get(field, [])
         try:
-            x = np.array([float(t) for t in (args or {}).get("values", [])])
+            x = np.array([float(t) for t in vals])
         except Exception:
-            return {"error": "values must be a list of numbers"}
+            return {"error": "values must be a list of numbers, or use {\"field\": \"swipe_intervals_sec\"}"}
         if len(x) == 0:
-            return {"error": "empty values"}
+            return {"error": "no swipe events recorded"}
         return {"n": int(len(x)), "mean": round(float(x.mean()), 2), "median": round(float(np.median(x)), 2),
                 "std": round(float(x.std()), 2), "cv": round(float(x.std() / x.mean()), 3) if x.mean() else None,
                 "min": float(x.min()), "max": float(x.max())}
@@ -113,12 +121,43 @@ def call_llm(system, messages, a):
                                        messages=[{"role": "system", "content": system}] + messages)
     return r.choices[0].message.content
 
+def _objects(text):
+    """문장 안의 { ... } 덩어리를 괄호 짝으로 하나씩 꺼낸다 (JSON이 여러 개이거나 앞뒤에 설명이 붙어도 됨)"""
+    depth, start, in_str, esc = 0, None, False, False
+    for i, ch in enumerate(text):
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}" and depth:
+            depth -= 1
+            if depth == 0:
+                yield text[start:i + 1]
+
 def parse(text):
-    m = re.search(r"\{.*\}", text or "", re.S)
-    try:
-        return json.loads(m.group(0))
-    except Exception:
-        return None
+    """작은 모델의 흔한 형식 실수(코드 블록, JSON 여러 개, 목록 속 ... 생략, 끝의 쉼표)를 견디며 첫 번째 유효한 행동/도구 JSON을 찾는다"""
+    t = (text or "").replace("```json", "").replace("```", "")
+    for cand in _objects(t):
+        for k, c in enumerate((cand, re.sub(r",?\s*(\.\.\.|…)\s*", "", cand), re.sub(r",\s*([}\]])", r"\1", cand))):
+            try:
+                d = json.loads(c)
+            except Exception:
+                continue
+            if isinstance(d, dict) and ("action" in d or "tool" in d):
+                if k == 1 and isinstance(d.get("args"), dict):   # 목록을 ...로 생략한 경우: 적힌 숫자는 버리고 터치 기록 전체로 계산
+                    d["args"].pop("values", None)
+                return d
+    return None
 
 def mock_reply(step, row, rnd):
     plan = rnd.sample([["get_touch_log", "compute_stats"], ["get_user_context"], ["get_touch_log", "compute_stats", "get_user_context"], []], 1)[0]
@@ -131,7 +170,7 @@ def run_case(row, a, touch, rnd):
     system = (SYSTEM_EN if a.lang == "en" else SYSTEM_KO).replace("MAX_TOOLS", str(a.max_tools))
     messages = [{"role": "user", "content": first_message(row, a.lang)}]
     tools_used, format_errors = [], 0
-    for step in range(a.max_tools + 3):           # 도구 호출 + 형식 오류 안내 1회 + 최종 결정
+    for step in range(a.max_tools + 4):           # 도구 호출 + 형식 오류 안내 2회 + 최종 결정
         text = mock_reply(len(tools_used), row, random.Random(f"{rnd}{row['case_id']}")) if a.mock else call_llm(system, messages, a)
         messages.append({"role": "assistant", "content": text})
         d = parse(text)
@@ -144,9 +183,10 @@ def run_case(row, a, touch, rnd):
             messages.append({"role": "user", "content": "Tool result: " + json.dumps(result, ensure_ascii=False)})
             continue
         format_errors += 1
-        if format_errors > 1:
+        if format_errors > 2:
             return "PARSE_ERROR", (text or "")[:200].replace("\n", " "), tools_used, messages
-        remind = 'Reply with exactly one line of JSON: {"tool": ..., "args": {...}} or {"action": ..., "reason": ...}.'
+        remind = ('Reply with exactly one line of JSON and nothing else: {"tool": ..., "args": {...}} or {"action": ..., "reason": ...}. '
+                  'To get statistics, call {"tool": "compute_stats", "args": {"field": "swipe_intervals_sec"}} instead of copying numbers.')
         if len(tools_used) >= a.max_tools:
             remind = 'Tool limit reached. Reply now with the final decision: {"action": ..., "reason": ...}.'
         messages.append({"role": "user", "content": remind})

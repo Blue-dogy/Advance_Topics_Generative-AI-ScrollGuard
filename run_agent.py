@@ -70,12 +70,41 @@ def call_llm(system, user, a):
         messages=[{"role": "system", "content": system}, {"role": "user", "content": user}])
     return r.choices[0].message.content
 
+def _objects(text):
+    """문장 안의 { ... } 덩어리를 괄호 짝으로 하나씩 꺼낸다"""
+    depth, start, in_str, esc = 0, None, False, False
+    for i, ch in enumerate(text):
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}" and depth:
+            depth -= 1
+            if depth == 0:
+                yield text[start:i + 1]
+
 def parse(text):
-    m = re.search(r"\{.*\}", text, re.S)
-    try:
-        d = json.loads(m.group(0)); return str(d.get("action", "")).strip(), str(d.get("reason", "")).strip()
-    except Exception:
-        return "PARSE_ERROR", text[:200].replace("\n", " ")
+    """코드 블록, 앞뒤 설명, JSON 여러 개, 끝의 쉼표 같은 흔한 형식 실수를 견디며 첫 번째 action JSON을 찾는다"""
+    t = (text or "").replace("```json", "").replace("```", "")
+    for cand in _objects(t):
+        for c in (cand, re.sub(r",\s*([}\]])", r"\1", cand)):
+            try:
+                d = json.loads(c)
+            except Exception:
+                continue
+            if isinstance(d, dict) and "action" in d:
+                return str(d.get("action", "")).strip(), str(d.get("reason", "")).strip()
+    return "PARSE_ERROR", (text or "")[:200].replace("\n", " ")
 
 def main():
     ap = argparse.ArgumentParser()
