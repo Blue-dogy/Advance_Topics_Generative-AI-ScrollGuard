@@ -76,15 +76,19 @@ def call_llm(system, user, a):
     return r.choices[0].message.content, r.choices[0].finish_reason == "length"
 
 ACT_RE = re.compile(r'"action"\s*:\s*"\s*(no_intervention|gentle_prompt|ask_context)\s*"')
-REASON_RE = re.compile(r'"reason"\s*:\s*"(.*)"\s*,\s*"action"', re.S)
+REASON_KEY = re.compile(r'"reason"\s*:\s*"')
 
 def salvage(t):
     """JSON으로 읽히지 않는 응답(근거 안의 따옴표 등)에서 행동 이름만 정확히 일치할 때 꺼낸다. 행동이 없으면(잘린 응답) 복구하지 않는다"""
     m = ACT_RE.search(t or "")
     if not m:
         return None
-    w = REASON_RE.search(t)
-    return m.group(1), (w.group(1).strip() if w else "")
+    w = REASON_KEY.search(t)
+    if not w:
+        return m.group(1), ""
+    # 근거 키부터 action 키 앞까지(근거가 뒤에 오면 끝까지)를 근거로 본다. 따옴표·쉼표가 어긋나도 내용은 살린다
+    end = m.start() if m.start() > w.end() else len(t)
+    return m.group(1), t[w.end():end].strip().rstrip('{}," \n').strip()
 
 def _objects(text):
     """문장 안의 { ... } 덩어리를 괄호 짝으로 하나씩 꺼낸다"""
