@@ -109,17 +109,30 @@ def run_tool(name, args, row, touch, lang):
                 "recent_context": row["recent_context"] or none}
     return {"error": f"unknown tool '{name}'. Available: {', '.join(TOOLS)}"}
 
+MAX_TOKENS = 1000   # 근거를 먼저 쓰므로(#15) 한도에 걸리면 action이 잘린다. 잘림 방지용 여유
+
 def call_llm(system, messages, a):
     if a.provider == "anthropic":
         import anthropic  # ANTHROPIC_API_KEY 필요
         msg = anthropic.Anthropic(timeout=a.timeout).messages.create(
-            model=a.model, max_tokens=600, system=system, messages=messages)
-        return msg.content[0].text
+            model=a.model, max_tokens=MAX_TOKENS, system=system, messages=messages)
+        return msg.content[0].text, msg.stop_reason == "max_tokens"
     from openai import OpenAI  # pip install openai
     client = OpenAI(base_url=a.base_url, api_key="lm-studio", timeout=a.timeout, max_retries=0)
-    r = client.chat.completions.create(model=a.model, max_tokens=600, temperature=a.temperature,
+    r = client.chat.completions.create(model=a.model, max_tokens=MAX_TOKENS, temperature=a.temperature,
                                        messages=[{"role": "system", "content": system}] + messages)
-    return r.choices[0].message.content
+    return r.choices[0].message.content, r.choices[0].finish_reason == "length"
+
+ACT_RE = re.compile(r'"action"\s*:\s*"\s*(no_intervention|gentle_prompt|ask_context)\s*"')
+REASON_RE = re.compile(r'"reason"\s*:\s*"(.*)"\s*,\s*"action"', re.S)
+
+def salvage(t):
+    """JSON으로 읽히지 않는 응답(근거 안의 따옴표 등)에서 행동 이름만 정확히 일치할 때 꺼낸다. 행동이 없으면(잘린 응답) 복구하지 않는다"""
+    m = ACT_RE.search(t or "")
+    if not m:
+        return None
+    w = REASON_RE.search(t)
+    return m.group(1), (w.group(1).strip() if w else "")
 
 def _objects(text):
     """문장 안의 { ... } 덩어리를 괄호 짝으로 하나씩 꺼낸다 (JSON이 여러 개이거나 앞뒤에 설명이 붙어도 됨)"""
@@ -157,6 +170,9 @@ def parse(text):
                 if k == 1 and isinstance(d.get("args"), dict):   # 목록을 ...로 생략한 경우: 적힌 숫자는 버리고 터치 기록 전체로 계산
                     d["args"].pop("values", None)
                 return d
+    s = salvage(t)
+    if s:
+        return {"action": s[0], "reason": s[1]}
     return None
 
 def mock_reply(step, row, rnd):
@@ -171,7 +187,7 @@ def run_case(row, a, touch, rnd):
     messages = [{"role": "user", "content": first_message(row, a.lang)}]
     tools_used, format_errors = [], 0
     for step in range(a.max_tools + 4):           # 도구 호출 + 형식 오류 안내 2회 + 최종 결정
-        text = mock_reply(len(tools_used), row, random.Random(f"{rnd}{row['case_id']}")) if a.mock else call_llm(system, messages, a)
+        text, cut = (mock_reply(len(tools_used), row, random.Random(f"{rnd}{row['case_id']}")), False) if a.mock else call_llm(system, messages, a)
         messages.append({"role": "assistant", "content": text})
         d = parse(text)
         if isinstance(d, dict) and "action" in d:
@@ -184,7 +200,7 @@ def run_case(row, a, touch, rnd):
             continue
         format_errors += 1
         if format_errors > 2:
-            return "PARSE_ERROR", (text or "")[:200].replace("\n", " "), tools_used, messages
+            return "PARSE_ERROR", ("TRUNCATED (max_tokens): " if cut else "") + (text or "")[:200].replace("\n", " "), tools_used, messages
         remind = ('Reply with exactly one line of JSON and nothing else: {"tool": ..., "args": {...}} or {"reason": ..., "action": ...}. '
                   'To get statistics, call {"tool": "compute_stats", "args": {"field": "swipe_intervals_sec"}} instead of copying numbers.')
         if len(tools_used) >= a.max_tools:
