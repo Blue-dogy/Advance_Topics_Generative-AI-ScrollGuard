@@ -17,8 +17,8 @@ SYSTEM_PROMPT = """너는 ScrollGuard, 사용자의 스마트폰 사용 맥락�
 
 반드시 아래 셋 중 정확히 하나를 고른다.
 - no_intervention: 의도적이거나 정상적인 사용. 아무것도 하지 않는다.
-- gentle_prompt: 자동조종 사용으로 판단. 강제 차단 없이 화면을 흑백으로 서서히 바꾸고(Grayscale Fade) 작은 팝업이나 음성(TTS)으로 지금 하려는 일을 확인한다. 사용자는 언제든 계속할 수 있다.
-- ask_context: 신호가 충돌하거나 판단에 필요한 정보가 부족. 사용자에게 지금 하려는 일을 먼저 묻는다.
+- gentle_prompt: 자동조종 사용으로 판단. 강제 차단 없이 화면을 흑백으로 서서히 바꾸고 작은 팝업이나 음성(TTS)으로 확인한다. 사용자는 언제든 계속할 수 있다.
+- ask_context: 신호가 충돌하거나 판단에 필요한 정보가 부족. 지금 하려는 일을 먼저 묻는다.
 불필요한 개입은 신뢰를 해치므로 비용이 크지만, 명백한 자동조종을 놓치는 것도 비용이다.
 
 출력은 JSON 한 줄만. 근거를 먼저 쓰고, 그 근거에서 나오는 행동을 마지막에 쓴다: {"reason": "<근거 1~2문장>", "action": "<위 셋 중 하나>"}"""
@@ -37,7 +37,7 @@ and intervene gently only when the user appears to be on autopilot (mindless scr
 
 You must choose exactly one of the following three actions.
 - no_intervention: Intentional or normal use. Do nothing.
-- gentle_prompt: Judged as autopilot use. Without forcing a block, fade the screen to grayscale and show a small pop-up or TTS check-in about what the user wants to do. The user can always continue.
+- gentle_prompt: Judged as autopilot use. Without forcing a block, fade the screen to grayscale and show a small pop-up or TTS check-in. The user can always continue.
 - ask_context: Signals conflict or information needed to decide is missing. Ask the user what they are trying to do first.
 Unnecessary intervention damages trust and is costly, but missing clear autopilot use is also costly.
 
@@ -50,6 +50,41 @@ FIELDS_EN = [("time_of_day", "Current time"), ("entry_trigger", "Entry trigger")
              ("swipe_interval_cv", "Swipe interval variability, CV (0 = perfectly regular; about 0.3 or lower = very regular; about 1 or higher = irregular)"),
              ("avg_dwell_sec", "Average time on each item (post or video) before swiping (sec)"),
              ("self_reported_mood", "Self-reported mood (1-6, higher = better)"), ("typical_usage_minutes", "This user's typical usage per hour, median (min)")]
+
+# 행동 정의 비교 실험(ablation)용 변형. 기본값 aligned가 본 실행 프롬프트다.
+#   before18: #18 수정 전 (gentle_prompt에 "하려는 일을 확인"이 붙어 ask_context와 겹침)
+#   distinct: 두 행동을 판단 상태 · 마찰 · 질문 여부로 구분하고, 묻기의 쓰임과 부담을 한 문장 추가
+PROMPT_VARIANTS = {
+    "aligned": [],
+    "before18": [
+        ("show a small pop-up or TTS check-in. The user can always continue.",
+         "show a small pop-up or TTS check-in about what the user wants to do. The user can always continue."),
+        ("작은 팝업이나 음성(TTS)으로 확인한다.", "작은 팝업이나 음성(TTS)으로 지금 하려는 일을 확인한다."),
+    ],
+    "distinct": [
+        ("- gentle_prompt: Judged as autopilot use. Without forcing a block, fade the screen to grayscale and show a small pop-up or TTS check-in. The user can always continue.",
+         "- gentle_prompt: You judge that the user is on autopilot. Add light friction without blocking: fade the screen to grayscale and show a short pop-up or TTS nudge that points out the pattern. The user can always continue."),
+        ("- ask_context: Signals conflict or information needed to decide is missing. Ask the user what they are trying to do first.",
+         "- ask_context: You cannot tell yet whether the use is intentional (signals conflict, or information needed to decide is missing). Add no friction; first ask one neutral question about what the user is trying to do."),
+        ("Unnecessary intervention damages trust and is costly, but missing clear autopilot use is also costly.",
+         "Unnecessary intervention damages trust and is costly, and missing clear autopilot use is also costly. When you cannot tell, asking is cheaper than a wrong decision, but asking when the answer is clear is also a burden."),
+        ("- gentle_prompt: 자동조종 사용으로 판단. 강제 차단 없이 화면을 흑백으로 서서히 바꾸고 작은 팝업이나 음성(TTS)으로 확인한다. 사용자는 언제든 계속할 수 있다.",
+         "- gentle_prompt: 자동조종 사용이라고 판단했다. 차단 없이 가벼운 마찰을 준다: 화면을 흑백으로 서서히 바꾸고, 작은 팝업이나 음성(TTS)으로 지금의 사용 패턴을 짚어 준다. 사용자는 언제든 계속할 수 있다."),
+        ("- ask_context: 신호가 충돌하거나 판단에 필요한 정보가 부족. 지금 하려는 일을 먼저 묻는다.",
+         "- ask_context: 의도적인 사용인지 아직 판단할 수 없다(신호가 충돌하거나 판단에 필요한 정보가 부족). 마찰 없이, 지금 하려는 일을 중립적인 질문 하나로 먼저 묻는다."),
+        ("불필요한 개입은 신뢰를 해치므로 비용이 크지만, 명백한 자동조종을 놓치는 것도 비용이다.",
+         "불필요한 개입은 신뢰를 해치므로 비용이 크고, 명백한 자동조종을 놓치는 것도 비용이다. 판단할 수 없을 때는 잘못 결정하는 것보다 묻는 편이 낫지만, 답이 분명할 때 묻는 것도 부담이다."),
+    ],
+}
+
+def system_prompt(lang, variant="aligned"):
+    s = SYSTEM_PROMPT_EN if lang == "en" else SYSTEM_PROMPT
+    for old, new in PROMPT_VARIANTS[variant]:
+        if old in s:
+            s = s.replace(old, new)
+        elif old.isascii() == (lang == "en"):   # 같은 언어의 치환이 맞지 않으면 실험이 조용히 무의미해지므로 멈춘다
+            raise SystemExit(f"prompt variant '{variant}': text not found in the {lang} prompt: {old[:60]}")
+    return s
 
 def build_user_message(row, lang="ko"):
     en = lang == "en"
@@ -152,6 +187,8 @@ def main():
     ap.add_argument("--timeout", type=float, default=120, help="사례 1건 응답 대기 한도(초)")
     ap.add_argument("--temperature", type=float, default=0.3, help="0이면 3회 실행 결과가 같아져 일관성 측정이 무의미")
     ap.add_argument("--lang", choices=["ko", "en"], default="ko", help="프롬프트/필드 언어 (입력 CSV 언어와 맞출 것)")
+    ap.add_argument("--prompt-variant", choices=list(PROMPT_VARIANTS), default="aligned",
+                    help="행동 정의 비교 실험용. 본 실행은 기본값(aligned)")
     ap.add_argument("--mock", action="store_true"); ap.add_argument("--resume", action="store_true")
     ap.add_argument("--limit", type=int, default=0, help="시험 실행: 앞에서 N개 사례만")
     ap.add_argument("--cases", default="", help="시험 실행: 쉼표로 구분한 case_id만 (예: S001,S039)")
@@ -188,6 +225,9 @@ def main():
             csv.writer(f).writerow(["case_id", "run", "action", "reason"])
         open(raw_path, "w").close()
 
+    system = system_prompt(a.lang, a.prompt_variant)
+    if a.prompt_variant != "aligned":
+        print(f"프롬프트 변형: {a.prompt_variant}")
     total, n, fails, t_start = len(df) * a.runs, len(done), 0, time.time()
     for run in range(a.runs):
         for r in df.to_dict("records"):
@@ -199,7 +239,7 @@ def main():
                 raw = json.dumps({"reason": why, "action": act})
             else:
                 try:
-                    raw, cut = call_llm(SYSTEM_PROMPT_EN if a.lang == "en" else SYSTEM_PROMPT, build_user_message(r, a.lang), a)
+                    raw, cut = call_llm(system, build_user_message(r, a.lang), a)
                     act, why = parse(raw); fails = 0
                     if act == "PARSE_ERROR" and cut:
                         why = "TRUNCATED (max_tokens): " + why
@@ -208,7 +248,7 @@ def main():
             with open(a.out, "a", newline="", encoding="utf-8") as f:
                 csv.writer(f).writerow([r["case_id"], run, act, why])
             with open(raw_path, "a", encoding="utf-8") as f:
-                f.write(json.dumps({"case_id": r["case_id"], "run": run, "action": act, "reason": why, "raw": raw, "truncated": cut}, ensure_ascii=False) + "\n")
+                f.write(json.dumps({"case_id": r["case_id"], "run": run, "action": act, "reason": why, "raw": raw, "truncated": cut, "prompt_variant": a.prompt_variant}, ensure_ascii=False) + "\n")
             n += 1
             eta = (time.time() - t_start) / max(n - len(done), 1) * (total - n) / 60
             print(f"[{n}/{total}] run{run} {r['case_id']} -> {act} ({time.time()-t0:.1f}s, 남은 약 {eta:.1f}분)", flush=True)
