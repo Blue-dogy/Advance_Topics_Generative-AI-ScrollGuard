@@ -59,18 +59,32 @@ def build_user_message(row, lang="ko"):
         lines.append(f"- {name}: " + (("(none)" if en else "(없음)") if pd.isna(v) or v == "" else str(v)))
     return ("Decide the action for the following usage situation.\n" if en else "다음 사용 상황에 대해 행동을 결정하라.\n") + "\n".join(lines)
 
+# 근거를 먼저 쓰므로(#15) 한도에 걸리면 action이 잘린다. 1~2문장에는 100토큰 안팎이면 충분하고, 한도는 잘림 방지용 여유다
+MAX_TOKENS = 1000
+
 def call_llm(system, user, a):
     if a.provider == "anthropic":
         import anthropic  # ANTHROPIC_API_KEY 필요
         msg = anthropic.Anthropic(timeout=a.timeout).messages.create(
-            model=a.model, max_tokens=300, system=system, messages=[{"role": "user", "content": user}])
-        return msg.content[0].text
+            model=a.model, max_tokens=MAX_TOKENS, system=system, messages=[{"role": "user", "content": user}])
+        return msg.content[0].text, msg.stop_reason == "max_tokens"
     from openai import OpenAI  # pip install openai
     client = OpenAI(base_url=a.base_url, api_key="lm-studio", timeout=a.timeout, max_retries=0)
     r = client.chat.completions.create(
-        model=a.model, max_tokens=300, temperature=a.temperature,
+        model=a.model, max_tokens=MAX_TOKENS, temperature=a.temperature,
         messages=[{"role": "system", "content": system}, {"role": "user", "content": user}])
-    return r.choices[0].message.content
+    return r.choices[0].message.content, r.choices[0].finish_reason == "length"
+
+ACT_RE = re.compile(r'"action"\s*:\s*"\s*(no_intervention|gentle_prompt|ask_context)\s*"')
+REASON_RE = re.compile(r'"reason"\s*:\s*"(.*)"\s*,\s*"action"', re.S)
+
+def salvage(t):
+    """JSON으로 읽히지 않는 응답(근거 안의 따옴표 등)에서 행동 이름만 정확히 일치할 때 꺼낸다. 행동이 없으면(잘린 응답) 복구하지 않는다"""
+    m = ACT_RE.search(t or "")
+    if not m:
+        return None
+    w = REASON_RE.search(t)
+    return m.group(1), (w.group(1).strip() if w else "")
 
 def _objects(text):
     """문장 안의 { ... } 덩어리를 괄호 짝으로 하나씩 꺼낸다"""
@@ -106,6 +120,9 @@ def parse(text):
                 continue
             if isinstance(d, dict) and "action" in d:
                 return str(d.get("action", "")).strip(), str(d.get("reason", "")).strip()
+    s = salvage(t)
+    if s:
+        return s
     return "PARSE_ERROR", (text or "")[:200].replace("\n", " ")
 
 def main():
@@ -130,6 +147,8 @@ def main():
             w = csv.writer(f); w.writerow(["case_id", "run", "action", "reason"])
             for r in rows:
                 act, why = (r["action"], r["reason"]) if r.get("raw") is None else parse(r["raw"])
+                if act == "PARSE_ERROR" and r.get("truncated"):
+                    why = "TRUNCATED (max_tokens): " + why
                 w.writerow([r["case_id"], r["run"], act, why])
         print(f"재해석 완료: {len(rows)}건 -> {a.out}")
         return
@@ -156,20 +175,22 @@ def main():
         for r in df.to_dict("records"):
             if (r["case_id"], run) in done:
                 continue
-            t0 = time.time(); raw = None
+            t0 = time.time(); raw = None; cut = False
             if a.mock:
                 act = random.Random(f"{run}{r['case_id']}").choice(["no_intervention", "gentle_prompt", "ask_context"]); why = "mock"
                 raw = json.dumps({"reason": why, "action": act})
             else:
                 try:
-                    raw = call_llm(SYSTEM_PROMPT_EN if a.lang == "en" else SYSTEM_PROMPT, build_user_message(r, a.lang), a)
+                    raw, cut = call_llm(SYSTEM_PROMPT_EN if a.lang == "en" else SYSTEM_PROMPT, build_user_message(r, a.lang), a)
                     act, why = parse(raw); fails = 0
+                    if act == "PARSE_ERROR" and cut:
+                        why = "TRUNCATED (max_tokens): " + why
                 except Exception as e:  # 타임아웃/서버 오류: 기록하고 계속, 연속 3회면 중단
                     act, why, fails = "API_ERROR", f"{type(e).__name__}: {str(e)[:150]}", fails + 1
             with open(a.out, "a", newline="", encoding="utf-8") as f:
                 csv.writer(f).writerow([r["case_id"], run, act, why])
             with open(raw_path, "a", encoding="utf-8") as f:
-                f.write(json.dumps({"case_id": r["case_id"], "run": run, "action": act, "reason": why, "raw": raw}, ensure_ascii=False) + "\n")
+                f.write(json.dumps({"case_id": r["case_id"], "run": run, "action": act, "reason": why, "raw": raw, "truncated": cut}, ensure_ascii=False) + "\n")
             n += 1
             eta = (time.time() - t_start) / max(n - len(done), 1) * (total - n) / 60
             print(f"[{n}/{total}] run{run} {r['case_id']} -> {act} ({time.time()-t0:.1f}s, 남은 약 {eta:.1f}분)", flush=True)
