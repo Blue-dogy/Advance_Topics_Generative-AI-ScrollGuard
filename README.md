@@ -150,6 +150,7 @@ Submit a CSV with the columns `case_id, run, action, reason` (one row per case a
 | `check_leakage_en.py`, `check_consistency.py` | Answer-leak check; text vs. number consistency check |
 | `run_agent.py`, `run_agent_tools.py` | Track A and track B runners (local or Anthropic, `--mock`) |
 | `evaluate.py` | Baselines, metrics, confusion matrices, cost sensitivity |
+| `ablation.py` | Compares prompt variants (`run_agent.py --prompt-variant`) on the same cases |
 | `agreement.py`, `docs/annotation/` | Cohen's kappa; annotation guide ([EN](docs/annotation/annotation_guide_en.pdf), [EN/KO](docs/annotation/annotation_guide.pdf)) and blank sheets |
 | `docs/` | Reports, file graphs (`file_graph_en.png`, `file_graph_ko.png`) |
 
