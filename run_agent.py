@@ -8,7 +8,7 @@ run_agent.py (v2.1) - 벤치마크 입력만 LLM에 넣고 예측을 '사례마�
   시험 실행: --limit 10 또는 --cases S001,S039 (본 실행 전에 판단 근거를 먼저 확인)
   원문 응답은 --out과 같은 이름의 .jsonl에 저장된다. 파서를 고친 뒤에는 --reparse로 다시 실행 없이 재해석
 """
-import argparse, csv, json, os, random, re, time
+import argparse, ast, csv, json, os, random, re, time
 import pandas as pd
 
 SYSTEM_PROMPT = """너는 ScrollGuard, 사용자의 스마트폰 사용 맥락을 보고 개입 여부를 정하는 '의도 인식' 에이전트다.
@@ -75,7 +75,20 @@ def call_llm(system, user, a):
         messages=[{"role": "system", "content": system}, {"role": "user", "content": user}])
     return r.choices[0].message.content, r.choices[0].finish_reason == "length"
 
-ACT_RE = re.compile(r'"action"\s*:\s*"\s*(no_intervention|gentle_prompt|ask_context)\s*"')
+def norm_action(v):
+    """대소문자·공백·하이픈만 다른 행동 이름(Gentle_prompt, gentle prompt)을 표준 이름으로. 그 밖의 값은 그대로 둔다(무효로 채점)"""
+    s = str(v).strip()
+    k = s.lower().replace("-", "_").replace(" ", "_")
+    return k if k in ("no_intervention", "gentle_prompt", "ask_context") else s
+
+def _load(c):
+    """JSON으로 읽고, 안 되면 작은따옴표 dict({'action': ...})도 파이썬 리터럴로 읽는다"""
+    try:
+        return json.loads(c)
+    except Exception:
+        return ast.literal_eval(c)
+
+ACT_RE = re.compile(r'"action"\s*:\s*"\s*(no_intervention|gentle_prompt|ask_context)\s*"', re.I)
 REASON_KEY = re.compile(r'"reason"\s*:\s*"')
 
 def salvage(t):
@@ -83,12 +96,13 @@ def salvage(t):
     m = ACT_RE.search(t or "")
     if not m:
         return None
+    act = m.group(1).lower()
     w = REASON_KEY.search(t)
     if not w:
-        return m.group(1), ""
+        return act, ""
     # 근거 키부터 action 키 앞까지(근거가 뒤에 오면 끝까지)를 근거로 본다. 따옴표·쉼표가 어긋나도 내용은 살린다
     end = m.start() if m.start() > w.end() else len(t)
-    return m.group(1), t[w.end():end].strip().rstrip('{}," \n').strip()
+    return act, t[w.end():end].strip().rstrip('{}," \n').strip()
 
 def _objects(text):
     """문장 안의 { ... } 덩어리를 괄호 짝으로 하나씩 꺼낸다"""
@@ -119,11 +133,11 @@ def parse(text):
     for cand in _objects(t):
         for c in (cand, re.sub(r",\s*([}\]])", r"\1", cand)):
             try:
-                d = json.loads(c)
+                d = _load(c)
             except Exception:
                 continue
             if isinstance(d, dict) and "action" in d:
-                return str(d.get("action", "")).strip(), str(d.get("reason", "")).strip()
+                return norm_action(d.get("action", "")), str(d.get("reason", "")).strip()
     s = salvage(t)
     if s:
         return s
