@@ -140,10 +140,19 @@ def main():
     ap.add_argument("--meta", default="benchmark_meta.csv"); ap.add_argument("--pred", nargs="*", default=[])
     ap.add_argument("--out", default="results_summary.csv"); ap.add_argument("--confusion", action="store_true")
     ap.add_argument("--sensitivity", action="store_true", help="비용 가중치 세트별 cost_score와 순위 출력")
+    ap.add_argument("--agreed-only", action="store_true",
+                    help="독립 라벨러 2명이 모두 최종 정답과 같게 고른 사례만 채점 (정답이 논쟁적인 사례의 영향 확인)")
+    ap.add_argument("--annotations", nargs=2, default=["docs/annotation/results/annot_a.csv", "docs/annotation/results/annot_b.csv"])
     a = ap.parse_args()
     inp = pd.read_csv(a.inputs).set_index("case_id")
     meta = pd.read_csv(a.meta, dtype={"pair_id": str}).set_index("case_id")
     lab = pd.read_csv(a.labels).set_index("case_id").join(meta[[c for c in ["case_type", "pair_id"] if c in meta]])
+    if a.agreed_only:
+        ann = [pd.read_csv(f).set_index("case_id")["annotator_action"].astype(str).str.strip() for f in a.annotations]
+        keep = lab.index[(ann[0].reindex(lab.index) == lab.expected_action) & (ann[1].reindex(lab.index) == lab.expected_action)]
+        print(f"[--agreed-only] 라벨러 2명이 모두 정답과 같은 사례 {len(keep)}개만 채점 "
+              f"({', '.join(f'{k} {v}' for k, v in lab.loc[keep].expected_action.value_counts().items())})\n")
+        lab = lab.loc[keep]
     inp = inp.loc[lab.index]
     table = {}; first = {}; tools = {}
     for name, fn in BASELINES.items():
