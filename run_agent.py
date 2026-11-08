@@ -25,9 +25,9 @@ SYSTEM_PROMPT = """너는 ScrollGuard, 사용자의 스마트폰 사용 맥락�
 
 FIELDS = [("time_of_day", "현재 시각"), ("entry_trigger", "진입 계기"), ("app_type", "앱 유형"),
           ("user_stated_goal", "사용자가 선언한 목표"), ("user_state", "사용자 상태"), ("recent_context", "최근 맥락(관찰 기록)"),
-          ("usage_minutes", "최근 60분 사용 시간(분)"), ("usage_sessions", "세션 수"),
-          ("median_session_sec", "중앙 세션 길이(초)"), ("usage_quadratic", "세션 몰림 정도(0~1): 1시간 사용이 긴 세션 하나에 몰린 정도, 1 = 세션 1개, 주의 집중도가 아님"),
-          ("swipe_interval_cv", "스와이프 간격 변동계수(낮을수록 일정)"), ("avg_dwell_sec", "콘텐츠당 평균 체류(초)"),
+          ("usage_minutes", "최근 60분 사용 시간(분)"), ("usage_sessions", "최근 60분 세션 수"),
+          ("median_session_sec", "최근 60분 중앙 세션 길이(초)"), ("usage_quadratic", "세션 몰림 정도(0~1): 1시간 사용이 긴 세션 하나에 몰린 정도, 1 = 세션 1개, 주의 집중도가 아님"),
+          ("swipe_interval_cv", "스와이프 간격 변동계수 CV (0 = 완전히 일정; 약 0.3 이하 = 매우 일정; 약 1 이상 = 불규칙)"), ("avg_dwell_sec", "콘텐츠(게시물·영상) 하나에 머문 평균 시간(초)"),
           ("self_reported_mood", "기분 자기보고(1~6, 높을수록 좋음)"), ("typical_usage_minutes", "이 사용자의 평소 1시간 사용량 중앙값(분)")]
 
 
@@ -45,10 +45,10 @@ Output only one line of JSON: {"action": "<one of the three above>", "reason": "
 
 FIELDS_EN = [("time_of_day", "Current time"), ("entry_trigger", "Entry trigger"), ("app_type", "App type"),
              ("user_stated_goal", "User-stated goal"), ("user_state", "User state"), ("recent_context", "Recent context (observation log)"),
-             ("usage_minutes", "Usage in the last 60 minutes (min)"), ("usage_sessions", "Number of sessions"),
-             ("median_session_sec", "Median session length (sec)"), ("usage_quadratic", "Session concentration (0-1): share of the hour's use packed into one long session, 1 = a single session; not a measure of attention"),
-             ("swipe_interval_cv", "Swipe interval coefficient of variation (lower = more uniform)"),
-             ("avg_dwell_sec", "Average dwell per item (sec)"),
+             ("usage_minutes", "Usage in the last 60 minutes (min)"), ("usage_sessions", "Number of sessions in the last 60 minutes"),
+             ("median_session_sec", "Median session length in the last 60 minutes (sec)"), ("usage_quadratic", "Session concentration (0-1): share of the hour's use packed into one long session, 1 = a single session; not a measure of attention"),
+             ("swipe_interval_cv", "Swipe interval variability, CV (0 = perfectly regular; about 0.3 or lower = very regular; about 1 or higher = irregular)"),
+             ("avg_dwell_sec", "Average time on each item (post or video) before swiping (sec)"),
              ("self_reported_mood", "Self-reported mood (1-6, higher = better)"), ("typical_usage_minutes", "This user's typical usage per hour, median (min)")]
 
 def build_user_message(row, lang="ko"):

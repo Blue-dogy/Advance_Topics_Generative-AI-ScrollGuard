@@ -26,7 +26,7 @@ Do not judge by usage time alone. Do not disturb intentional use, and intervene 
 
 At first you only see basic usage data. You can call tools to gather more evidence before deciding:
 - get_touch_log: args {} -> the user's recent swipes: intervals (sec), speed (px/s) and direction (up = forward, down = back); empty if the app has no scrolling
-- compute_stats: args {"field": "swipe_intervals_sec"} or {"field": "swipe_speed_px_per_s"} -> n, mean, median, std, cv (coefficient of variation), min, max of that touch-log field (you can also pass {"values": [numbers]})
+- compute_stats: args {"field": "swipe_intervals_sec"} or {"field": "swipe_speed_px_per_s"} -> n, mean, median, std, cv, min, max of that touch-log field (cv = std / mean: 0 = perfectly regular, about 0.3 or lower = very regular, about 1 or higher = irregular) (you can also pass {"values": [numbers]})
 - get_user_context: args {} -> the user's stated goal, current state (who, where, what kind of day), self-reported mood and recent in-app behavior
 
 Final actions (choose exactly one):
@@ -46,7 +46,7 @@ SYSTEM_KO = """너는 ScrollGuard, 사용자의 스마트폰 사용에 개입할
 
 처음에는 기본 사용 정보만 보인다. 결정 전에 도구를 호출해 근거를 더 모을 수 있다.
 - get_touch_log: args {} -> 최근 스와이프의 간격(초), 속도(px/s), 방향(up = 다음, down = 뒤로). 스크롤이 없는 앱이면 빈 기록
-- compute_stats: args {"field": "swipe_intervals_sec"} 또는 {"field": "swipe_speed_px_per_s"} -> 그 터치 기록 필드의 n, mean, median, std, cv(변동계수), min, max ({"values": [숫자들]}도 가능)
+- compute_stats: args {"field": "swipe_intervals_sec"} 또는 {"field": "swipe_speed_px_per_s"} -> 그 터치 기록 필드의 n, mean, median, std, cv, min, max (cv = std / mean: 0 = 완전히 일정, 약 0.3 이하 = 매우 일정, 약 1 이상 = 불규칙) ({"values": [숫자들]}도 가능)
 - get_user_context: args {} -> 사용자가 선언한 목표, 현재 상태(누구인지·어디서·어떤 날인지), 기분 자기보고, 최근 앱 내 행동
 
 최종 행동(정확히 하나):
@@ -62,12 +62,12 @@ SYSTEM_KO = """너는 ScrollGuard, 사용자의 스마트폰 사용에 개입할
 도구는 최대 MAX_TOOLS번까지 호출할 수 있다."""
 
 OBS = {"en": [("time_of_day", "Current time"), ("entry_trigger", "Entry trigger"), ("app_type", "App type"),
-              ("usage_minutes", "Usage in the last 60 minutes (min)"), ("usage_sessions", "Number of sessions"),
-              ("median_session_sec", "Median session length (sec)"), ("usage_quadratic", "Session concentration (0-1): share of the hour's use packed into one long session, 1 = a single session; not a measure of attention"),
+              ("usage_minutes", "Usage in the last 60 minutes (min)"), ("usage_sessions", "Number of sessions in the last 60 minutes"),
+              ("median_session_sec", "Median session length in the last 60 minutes (sec)"), ("usage_quadratic", "Session concentration (0-1): share of the hour's use packed into one long session, 1 = a single session; not a measure of attention"),
               ("typical_usage_minutes", "This user's typical usage per hour, median (min)")],
        "ko": [("time_of_day", "현재 시각"), ("entry_trigger", "진입 계기"), ("app_type", "앱 유형"),
-              ("usage_minutes", "최근 60분 사용 시간(분)"), ("usage_sessions", "세션 수"),
-              ("median_session_sec", "중앙 세션 길이(초)"), ("usage_quadratic", "세션 몰림 정도(0~1): 1시간 사용이 긴 세션 하나에 몰린 정도, 1 = 세션 1개, 주의 집중도가 아님"),
+              ("usage_minutes", "최근 60분 사용 시간(분)"), ("usage_sessions", "최근 60분 세션 수"),
+              ("median_session_sec", "최근 60분 중앙 세션 길이(초)"), ("usage_quadratic", "세션 몰림 정도(0~1): 1시간 사용이 긴 세션 하나에 몰린 정도, 1 = 세션 1개, 주의 집중도가 아님"),
               ("typical_usage_minutes", "이 사용자의 평소 1시간 사용량 중앙값(분)")]}
 
 def first_message(row, lang):
