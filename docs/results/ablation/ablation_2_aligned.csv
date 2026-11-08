@@ -1,0 +1,31 @@
+﻿case_id,run,action,reason
+S001,0,no_intervention,The user is actively reviewing coding concepts and appears to be engaged in a structured study session.
+S003,0,gentle_prompt,"The user is at a bus stop during rush hour and has been using the news app for a long session without engaging in other activities like saving or commenting, suggesting they might be on autopilot."
+S006,0,no_intervention,The user is a regular ScrollGuard user and the usage pattern suggests they are intentionally watching videos before bed.
+S008,0,no_intervention,The user is actively searching and engaging with the app towards a specific goal of finding brunch places for a gathering.
+S017,0,gentle_prompt,"The user is a university student with a class in an hour, and the usage pattern suggests they are casually browsing without deep engagement or purchases."
+S018,0,no_intervention,"The user is actively studying Spanish expressions with short videos and pausing to save unfamiliar ones, indicating intentional use."
+S021,0,gentle_prompt,"The user is frequently switching between the browser and other apps, indicating they might be mindlessly browsing. The session concentration is very low, suggesting autopilot behavior."
+S023,0,no_intervention,"The user has been using the app for a significant portion of their time and shows signs of mindless scrolling, but there is no clear indication that they are in autopilot mode given their recent context suggests they might be multitasking."
+S027,0,no_intervention,"The user is watching videos after working and seems to be resting. The session length and swipe intervals suggest mindless scrolling, but the context indicates intentional use."
+S031,0,no_intervention,The user is likely taking a break and engaging with social media in a mindful manner during their lunchtime.
+S033,0,no_intervention,"The user is actively searching and interacting with recipe videos, which aligns with their stated goal of finding a soybean paste stew recipe for lunch. The behavior does not indicate autopilot use."
+S034,0,gentle_prompt,The user is in a weekday lunch break and shows signs of mindless scrolling without interacting meaningfully with the content.
+S036,0,gentle_prompt,"The user has a clear schedule and is writing content, but the high number of posts scrolled through suggests mindless scrolling during breaks."
+S037,0,no_intervention,"The user is actively watching videos related to their assignment and taking notes, indicating intentional use."
+S040,0,no_intervention,The user is reading articles in a focused manner and the session length is not excessively long.
+S041,0,gentle_prompt,"The user is an office worker using the social media feed shortly after waking up, with short and frequent sessions. The behavior suggests they might be checking updates mindlessly rather than engaging deeply."
+S044,0,gentle_prompt,The user is a university student who just woke up and has a class in an hour. The high frequency of use and the short session length suggest autopilot behavior rather than intentional engagement.
+S045,0,no_intervention,The user is actively searching for content related to their goal and has a clear purpose. The session length and concentration indicate focused use rather than autopilot scrolling.
+S047,0,gentle_prompt,"The user is a university student with a scheduled work time that has not yet started, and the recent use pattern indicates autopilot behavior without engagement or goal achievement."
+S049,0,gentle_prompt,"The user is a university student with a scheduled work period that has not yet started. The short video usage appears to be mindless and frequent, but there are no clear signs of deep engagement or distress."
+S056,0,no_intervention,The user is actively engaged in a specific task and appears to be making progress by deleting and favoriting photos.
+S059,0,gentle_prompt,"The user is a university student using the app late at night while lying in bed, and has been scrolling for an extended period without interacting meaningfully with posts. This suggests autopilot use."
+S060,0,no_intervention,The user is a university student who has just attended a friend's birthday party and is now in bed. The session length and swipe interval variability suggest regular use rather than autopilot scrolling.
+S061,0,gentle_prompt,"The user is watching a documentary series and has been using the app for an extended period without interacting much, suggesting mindless scrolling."
+S065,0,no_intervention,The user is actively engaged in a specific task and has a high concentration level within the app.
+S073,0,no_intervention,"The user is taking a break and appears to be looking through photos with intent, not engaging in excessive scrolling."
+S075,0,no_intervention,"The user is actively checking important information and has a clear goal, despite the late hour."
+S076,0,no_intervention,"The user is actively searching for a specific item and has a clear goal, indicating intentional use."
+S078,0,gentle_prompt,"The user is checking the weather and has a clear goal of heading to class soon. The recent context shows they have been reading celebrity news articles in a row, which suggests mindless scrolling."
+S080,0,no_intervention,"The user is an office worker with a scheduled meeting and dinner, indicating they are likely using the app for work-related purposes. The recent context shows regular but brief use of the messenger, which aligns with typical work communication patterns."
