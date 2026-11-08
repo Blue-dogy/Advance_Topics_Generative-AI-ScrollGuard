@@ -14,7 +14,7 @@ run_agent.py와 달리 처음에는 시각·진입 계기·앱 유형·사용량
   파이프라인 점검: --mock / 중간에 멈췄다면 같은 명령에 --resume
 출력: 예측 CSV(case_id, run, action, reason, tools, n_steps) + 같은 이름의 .jsonl(대화 전체 기록)
 """
-import argparse, csv, json, os, random, re, time
+import argparse, ast, csv, json, os, random, re, time
 import numpy as np
 import pandas as pd
 
@@ -123,7 +123,20 @@ def call_llm(system, messages, a):
                                        messages=[{"role": "system", "content": system}] + messages)
     return r.choices[0].message.content, r.choices[0].finish_reason == "length"
 
-ACT_RE = re.compile(r'"action"\s*:\s*"\s*(no_intervention|gentle_prompt|ask_context)\s*"')
+def norm_action(v):
+    """대소문자·공백·하이픈만 다른 행동 이름(Gentle_prompt, gentle prompt)을 표준 이름으로. 그 밖의 값은 그대로 둔다(무효로 채점)"""
+    s = str(v).strip()
+    k = s.lower().replace("-", "_").replace(" ", "_")
+    return k if k in ("no_intervention", "gentle_prompt", "ask_context") else s
+
+def _load(c):
+    """JSON으로 읽고, 안 되면 작은따옴표 dict({'action': ...})도 파이썬 리터럴로 읽는다"""
+    try:
+        return json.loads(c)
+    except Exception:
+        return ast.literal_eval(c)
+
+ACT_RE = re.compile(r'"action"\s*:\s*"\s*(no_intervention|gentle_prompt|ask_context)\s*"', re.I)
 TOOL_RE = re.compile(r'"(?:tool|action)"\s*:\s*"\s*(get_touch_log|compute_stats|get_user_context)\s*"'
                      r'(?:.*?"field"\s*:\s*"(swipe_intervals_sec|swipe_speed_px_per_s)")?', re.S)
 REASON_KEY = re.compile(r'"reason"\s*:\s*"')
@@ -133,12 +146,13 @@ def salvage(t):
     m = ACT_RE.search(t or "")
     if not m:
         return None
+    act = m.group(1).lower()
     w = REASON_KEY.search(t)
     if not w:
-        return m.group(1), ""
+        return act, ""
     # 근거 키부터 action 키 앞까지(근거가 뒤에 오면 끝까지)를 근거로 본다. 따옴표·쉼표가 어긋나도 내용은 살린다
     end = m.start() if m.start() > w.end() else len(t)
-    return m.group(1), t[w.end():end].strip().rstrip('{}," \n').strip()
+    return act, t[w.end():end].strip().rstrip('{}," \n').strip()
 
 def _objects(text):
     """문장 안의 { ... } 덩어리를 괄호 짝으로 하나씩 꺼낸다 (JSON이 여러 개이거나 앞뒤에 설명이 붙어도 됨)"""
@@ -169,9 +183,14 @@ def parse(text):
     for cand in _objects(t):
         for k, c in enumerate((cand, re.sub(r",?\s*(\.\.\.|…)\s*", "", cand), re.sub(r",\s*([}\]])", r"\1", cand))):
             try:
-                d = json.loads(c)
+                d = _load(c)
             except Exception:
                 continue
+            if isinstance(d, dict) and "tool" not in d and "action" not in d:
+                if len(d) == 1 and next(iter(d)) in TOOLS:            # {"get_user_context": {}}: 도구 이름을 키로 쓴 경우
+                    k = next(iter(d)); d = {"tool": k, "args": d[k] if isinstance(d[k], dict) else {}}
+                elif d.get("name") in TOOLS:                           # {"name": ..., "arguments": ...}: 함수 호출 API 형식
+                    d = {"tool": d["name"], "args": d.get("arguments") if isinstance(d.get("arguments"), dict) else {}}
             if isinstance(d, dict) and ("action" in d or "tool" in d):
                 if k == 1 and isinstance(d.get("args"), dict):   # 목록을 ...로 생략한 경우: 적힌 숫자는 버리고 터치 기록 전체로 계산
                     d["args"].pop("values", None)
@@ -201,9 +220,9 @@ def run_case(row, a, touch, rnd):
         d = parse(text)
         if isinstance(d, dict) and str(d.get("action", "")).strip() in TOOLS:   # 도구 이름을 action 키에 쓴 경우: 결정이 아니라 도구 호출로 본다
             d = {"tool": str(d["action"]).strip(), "args": d.get("args", {})}
-        if isinstance(d, dict) and "action" in d:
-            act = str(d.get("action", "")).strip()
-            return act, str(d.get("reason", "")).strip(), tools_used, messages
+        if isinstance(d, dict) and "action" in d and norm_action(d["action"]) in ACTIONS:
+            return norm_action(d["action"]), str(d.get("reason", "")).strip(), tools_used, messages
+        bad_action = isinstance(d, dict) and "action" in d             # 세 행동 밖의 값: 형식 오류로 보고 다시 묻는다
         if isinstance(d, dict) and "tool" in d and len(tools_used) < a.max_tools:
             name = str(d.get("tool", "")).strip(); tools_used.append(name)
             result = run_tool(name, d.get("args", {}), row, touch, a.lang)
@@ -214,6 +233,9 @@ def run_case(row, a, touch, rnd):
             return "PARSE_ERROR", ("TRUNCATED (max_tokens): " if cut else "") + (text or "")[:200].replace("\n", " "), tools_used, messages
         remind = ('Reply with exactly one line of JSON and nothing else: {"tool": ..., "args": {...}} or {"reason": ..., "action": ...}. '
                   'To get statistics, call {"tool": "compute_stats", "args": {"field": "swipe_intervals_sec"}} instead of copying numbers.')
+        if bad_action:
+            remind = ('"action" must be exactly one of: no_intervention, gentle_prompt, ask_context. '
+                      'Reply with exactly one line of JSON: {"reason": ..., "action": ...}, or call a tool with {"tool": ..., "args": {...}}.')
         if len(tools_used) >= a.max_tools:
             remind = 'Tool limit reached. Reply now with the final decision: {"reason": ..., "action": ...}.'
         messages.append({"role": "user", "content": remind})
