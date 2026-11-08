@@ -124,6 +124,8 @@ def call_llm(system, messages, a):
     return r.choices[0].message.content, r.choices[0].finish_reason == "length"
 
 ACT_RE = re.compile(r'"action"\s*:\s*"\s*(no_intervention|gentle_prompt|ask_context)\s*"')
+TOOL_RE = re.compile(r'"(?:tool|action)"\s*:\s*"\s*(get_touch_log|compute_stats|get_user_context)\s*"'
+                     r'(?:.*?"field"\s*:\s*"(swipe_intervals_sec|swipe_speed_px_per_s)")?', re.S)
 REASON_KEY = re.compile(r'"reason"\s*:\s*"')
 
 def salvage(t):
@@ -177,6 +179,9 @@ def parse(text):
     s = salvage(t)
     if s:
         return {"action": s[0], "reason": s[1]}
+    m = TOOL_RE.search(t)              # 깨진 JSON 속의 도구 호출: 도구 이름만 살리고 인자는 기본값(compute_stats는 스와이프 간격)
+    if m:
+        return {"tool": m.group(1), "args": {"field": m.group(2)} if m.group(2) else {}}
     return None
 
 def mock_reply(step, row, rnd):
@@ -194,6 +199,8 @@ def run_case(row, a, touch, rnd):
         text, cut = (mock_reply(len(tools_used), row, random.Random(f"{rnd}{row['case_id']}")), False) if a.mock else call_llm(system, messages, a)
         messages.append({"role": "assistant", "content": text})
         d = parse(text)
+        if isinstance(d, dict) and str(d.get("action", "")).strip() in TOOLS:   # 도구 이름을 action 키에 쓴 경우: 결정이 아니라 도구 호출로 본다
+            d = {"tool": str(d["action"]).strip(), "args": d.get("args", {})}
         if isinstance(d, dict) and "action" in d:
             act = str(d.get("action", "")).strip()
             return act, str(d.get("reason", "")).strip(), tools_used, messages
