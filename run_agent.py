@@ -21,7 +21,7 @@ SYSTEM_PROMPT = """너는 ScrollGuard, 사용자의 스마트폰 사용 맥락�
 - ask_context: 신호가 충돌하거나 판단에 필요한 정보가 부족. 사용자에게 지금 하려는 일을 먼저 묻는다.
 불필요한 개입은 신뢰를 해치므로 비용이 크지만, 명백한 자동조종을 놓치는 것도 비용이다.
 
-출력은 JSON 한 줄만: {"action": "<위 셋 중 하나>", "reason": "<근거 1~2문장>"}"""
+출력은 JSON 한 줄만. 근거를 먼저 쓰고, 그 근거에서 나오는 행동을 마지막에 쓴다: {"reason": "<근거 1~2문장>", "action": "<위 셋 중 하나>"}"""
 
 FIELDS = [("time_of_day", "현재 시각"), ("entry_trigger", "진입 계기"), ("app_type", "앱 유형"),
           ("user_stated_goal", "사용자가 선언한 목표"), ("user_state", "사용자 상태"), ("recent_context", "최근 맥락(관찰 기록)"),
@@ -41,7 +41,7 @@ You must choose exactly one of the following three actions.
 - ask_context: Signals conflict or information needed to decide is missing. Ask the user what they are trying to do first.
 Unnecessary intervention damages trust and is costly, but missing clear autopilot use is also costly.
 
-Output only one line of JSON: {"action": "<one of the three above>", "reason": "<1-2 sentences of reasoning>"}"""
+Output only one line of JSON. Write the reason first, then the action that follows from it: {"reason": "<1-2 sentences of reasoning>", "action": "<one of the three above>"}"""
 
 FIELDS_EN = [("time_of_day", "Current time"), ("entry_trigger", "Entry trigger"), ("app_type", "App type"),
              ("user_stated_goal", "User-stated goal"), ("user_state", "User state"), ("recent_context", "Recent context (observation log)"),
@@ -159,7 +159,7 @@ def main():
             t0 = time.time(); raw = None
             if a.mock:
                 act = random.Random(f"{run}{r['case_id']}").choice(["no_intervention", "gentle_prompt", "ask_context"]); why = "mock"
-                raw = json.dumps({"action": act, "reason": why})
+                raw = json.dumps({"reason": why, "action": act})
             else:
                 try:
                     raw = call_llm(SYSTEM_PROMPT_EN if a.lang == "en" else SYSTEM_PROMPT, build_user_message(r, a.lang), a)

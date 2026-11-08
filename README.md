@@ -15,7 +15,7 @@ The benchmark measures one decision: given a smartphone-usage situation, **shoul
 For each case the agent returns one line of JSON:
 
 ```json
-{"action": "no_intervention | gentle_prompt | ask_context", "reason": "1-2 sentences"}
+{"reason": "1-2 sentences", "action": "no_intervention | gentle_prompt | ask_context"}
 ```
 
 | Action | Meaning | Labeling rule |

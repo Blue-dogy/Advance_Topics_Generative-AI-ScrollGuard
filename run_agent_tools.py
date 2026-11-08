@@ -37,8 +37,8 @@ Unnecessary intervention damages trust and is costly, but missing clear autopilo
 
 Each reply must be exactly one line of JSON and nothing else, either a tool call:
 {"tool": "<tool name>", "args": {...}}
-or the final decision:
-{"action": "<one of the three actions>", "reason": "<1-2 sentences>"}
+or the final decision (write the reason first, then the action that follows from it):
+{"reason": "<1-2 sentences>", "action": "<one of the three actions>"}
 You may call at most MAX_TOOLS tools."""
 
 SYSTEM_KO = """너는 ScrollGuard, 사용자의 스마트폰 사용에 개입할지 정하는 '의도 인식' 에이전트다.
@@ -57,8 +57,8 @@ SYSTEM_KO = """너는 ScrollGuard, 사용자의 스마트폰 사용에 개입할
 
 매 응답은 다른 말 없이 JSON 한 줄이어야 한다. 도구 호출:
 {"tool": "<도구 이름>", "args": {...}}
-또는 최종 결정:
-{"action": "<세 행동 중 하나>", "reason": "<근거 1~2문장>"}
+또는 최종 결정 (근거를 먼저 쓰고, 그 근거에서 나오는 행동을 마지막에 쓴다):
+{"reason": "<근거 1~2문장>", "action": "<세 행동 중 하나>"}
 도구는 최대 MAX_TOOLS번까지 호출할 수 있다."""
 
 OBS = {"en": [("time_of_day", "Current time"), ("entry_trigger", "Entry trigger"), ("app_type", "App type"),
@@ -164,7 +164,7 @@ def mock_reply(step, row, rnd):
     if step < len(plan):
         t = plan[step]
         return json.dumps({"tool": t, "args": {"values": [1, 2, 3]} if t == "compute_stats" else {}})
-    return json.dumps({"action": rnd.choice(ACTIONS), "reason": "mock"})
+    return json.dumps({"reason": "mock", "action": rnd.choice(ACTIONS)})
 
 def run_case(row, a, touch, rnd):
     system = (SYSTEM_EN if a.lang == "en" else SYSTEM_KO).replace("MAX_TOOLS", str(a.max_tools))
@@ -185,10 +185,10 @@ def run_case(row, a, touch, rnd):
         format_errors += 1
         if format_errors > 2:
             return "PARSE_ERROR", (text or "")[:200].replace("\n", " "), tools_used, messages
-        remind = ('Reply with exactly one line of JSON and nothing else: {"tool": ..., "args": {...}} or {"action": ..., "reason": ...}. '
+        remind = ('Reply with exactly one line of JSON and nothing else: {"tool": ..., "args": {...}} or {"reason": ..., "action": ...}. '
                   'To get statistics, call {"tool": "compute_stats", "args": {"field": "swipe_intervals_sec"}} instead of copying numbers.')
         if len(tools_used) >= a.max_tools:
-            remind = 'Tool limit reached. Reply now with the final decision: {"action": ..., "reason": ...}.'
+            remind = 'Tool limit reached. Reply now with the final decision: {"reason": ..., "action": ...}.'
         messages.append({"role": "user", "content": remind})
     return "MAX_STEPS", "no final decision", tools_used, messages
 
