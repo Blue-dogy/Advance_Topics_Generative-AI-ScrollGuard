@@ -5,6 +5,8 @@ run_agent.py (v2.1) - 벤치마크 입력만 LLM에 넣고 예측을 '사례마�
   Anthropic API:   --provider anthropic --model <모델명>
   파이프라인 점검: --mock
   중간에 멈췄다면 같은 명령에 --resume 을 붙이면 이어서 진행
+  시험 실행: --limit 10 또는 --cases S001,S039 (본 실행 전에 판단 근거를 먼저 확인)
+  원문 응답은 --out과 같은 이름의 .jsonl에 저장된다. 파서를 고친 뒤에는 --reparse로 다시 실행 없이 재해석
 """
 import argparse, csv, json, os, random, re, time
 import pandas as pd
@@ -116,9 +118,27 @@ def main():
     ap.add_argument("--temperature", type=float, default=0.3, help="0이면 3회 실행 결과가 같아져 일관성 측정이 무의미")
     ap.add_argument("--lang", choices=["ko", "en"], default="ko", help="프롬프트/필드 언어 (입력 CSV 언어와 맞출 것)")
     ap.add_argument("--mock", action="store_true"); ap.add_argument("--resume", action="store_true")
+    ap.add_argument("--limit", type=int, default=0, help="시험 실행: 앞에서 N개 사례만")
+    ap.add_argument("--cases", default="", help="시험 실행: 쉼표로 구분한 case_id만 (예: S001,S039)")
+    ap.add_argument("--reparse", action="store_true", help="모델을 다시 부르지 않고 저장된 원문(.jsonl)을 현재 파서로 다시 해석해 --out을 새로 쓴다")
     a = ap.parse_args()
+    raw_path = os.path.splitext(a.out)[0] + ".jsonl"   # 모델 원문 응답: 파서를 고쳐도 다시 실행하지 않고 --reparse로 재채점
+
+    if a.reparse:
+        rows = [json.loads(x) for x in open(raw_path, encoding="utf-8")]
+        with open(a.out, "w", newline="", encoding="utf-8-sig") as f:
+            w = csv.writer(f); w.writerow(["case_id", "run", "action", "reason"])
+            for r in rows:
+                act, why = (r["action"], r["reason"]) if r.get("raw") is None else parse(r["raw"])
+                w.writerow([r["case_id"], r["run"], act, why])
+        print(f"재해석 완료: {len(rows)}건 -> {a.out}")
+        return
 
     df = pd.read_csv(a.inputs); df["user_stated_goal"] = df["user_stated_goal"].fillna("")
+    if a.cases:
+        df = df[df.case_id.isin([c.strip() for c in a.cases.split(",")])]
+    if a.limit:
+        df = df.head(a.limit)
     done = set()
     if a.resume and os.path.exists(a.out):
         old = pd.read_csv(a.out)
@@ -129,22 +149,27 @@ def main():
     else:
         with open(a.out, "w", newline="", encoding="utf-8-sig") as f:
             csv.writer(f).writerow(["case_id", "run", "action", "reason"])
+        open(raw_path, "w").close()
 
     total, n, fails, t_start = len(df) * a.runs, len(done), 0, time.time()
     for run in range(a.runs):
         for r in df.to_dict("records"):
             if (r["case_id"], run) in done:
                 continue
-            t0 = time.time()
+            t0 = time.time(); raw = None
             if a.mock:
                 act = random.Random(f"{run}{r['case_id']}").choice(["no_intervention", "gentle_prompt", "ask_context"]); why = "mock"
+                raw = json.dumps({"action": act, "reason": why})
             else:
                 try:
-                    act, why = parse(call_llm(SYSTEM_PROMPT_EN if a.lang == "en" else SYSTEM_PROMPT, build_user_message(r, a.lang), a)); fails = 0
+                    raw = call_llm(SYSTEM_PROMPT_EN if a.lang == "en" else SYSTEM_PROMPT, build_user_message(r, a.lang), a)
+                    act, why = parse(raw); fails = 0
                 except Exception as e:  # 타임아웃/서버 오류: 기록하고 계속, 연속 3회면 중단
                     act, why, fails = "API_ERROR", f"{type(e).__name__}: {str(e)[:150]}", fails + 1
             with open(a.out, "a", newline="", encoding="utf-8") as f:
                 csv.writer(f).writerow([r["case_id"], run, act, why])
+            with open(raw_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps({"case_id": r["case_id"], "run": run, "action": act, "reason": why, "raw": raw}, ensure_ascii=False) + "\n")
             n += 1
             eta = (time.time() - t_start) / max(n - len(done), 1) * (total - n) / 60
             print(f"[{n}/{total}] run{run} {r['case_id']} -> {act} ({time.time()-t0:.1f}s, 남은 약 {eta:.1f}분)", flush=True)

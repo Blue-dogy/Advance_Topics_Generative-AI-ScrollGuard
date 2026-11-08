@@ -204,11 +204,17 @@ def main():
     ap.add_argument("--max-tools", type=int, default=4, help="사례당 도구 호출 최대 횟수")
     ap.add_argument("--lang", choices=["ko", "en"], default="ko", help="프롬프트 언어 (입력 CSV 언어와 맞출 것)")
     ap.add_argument("--mock", action="store_true"); ap.add_argument("--resume", action="store_true")
+    ap.add_argument("--limit", type=int, default=0, help="시험 실행: 앞에서 N개 사례만")
+    ap.add_argument("--cases", default="", help="시험 실행: 쉼표로 구분한 case_id만 (예: S001,S039)")
     a = ap.parse_args()
 
     df = pd.read_csv(a.inputs)
     for c in ["user_stated_goal", "user_state", "recent_context"]:
         df[c] = df[c].fillna("")
+    if a.cases:
+        df = df[df.case_id.isin([c.strip() for c in a.cases.split(",")])]
+    if a.limit:
+        df = df.head(a.limit)
     touch = json.load(open(a.touch, encoding="utf-8"))
     missing = set(df.case_id) - set(touch)
     if missing:
