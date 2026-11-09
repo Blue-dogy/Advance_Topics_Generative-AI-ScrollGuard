@@ -70,6 +70,20 @@ OBS = {"en": [("time_of_day", "Current time"), ("entry_trigger", "Entry trigger"
               ("median_session_sec", "최근 60분 중앙 세션 길이(초)"), ("usage_quadratic", "세션 몰림 정도(0~1): 1시간 사용이 긴 세션 하나에 몰린 정도, 1 = 세션 1개, 주의 집중도가 아님"),
               ("typical_usage_minutes", "이 사용자의 평소 1시간 사용량 중앙값(분)")]}
 
+def system_prompt(lang, tool_order="default"):
+    """tool_order=context_first: 도구 목록에서 get_user_context를 맨 앞으로 옮긴다(설명 문구는 그대로).
+    작은 모델이 목록 순서대로 도구를 부르는지(위치 편향) 확인하는 비교 실험용. 본 실행은 default"""
+    s = SYSTEM_EN if lang == "en" else SYSTEM_KO
+    if tool_order == "context_first":
+        lines = s.split("\n")
+        idx = [i for i, l in enumerate(lines) if l.startswith(("- get_touch_log:", "- compute_stats:", "- get_user_context:"))]
+        if len(idx) != 3 or idx != list(range(idx[0], idx[0] + 3)):
+            raise SystemExit("tool list not found in the system prompt")
+        block = [lines[i] for i in idx]
+        lines[idx[0]:idx[0] + 3] = [block[2], block[0], block[1]]
+        s = "\n".join(lines)
+    return s
+
 def first_message(row, lang):
     lines = [f"- {name}: {row[col]}" for col, name in OBS[lang]]
     head = "New usage situation. Gather evidence with tools if needed, then decide.\n" if lang == "en" \
@@ -211,7 +225,7 @@ def mock_reply(step, row, rnd):
     return json.dumps({"reason": "mock", "action": rnd.choice(ACTIONS)})
 
 def run_case(row, a, touch, rnd):
-    system = (SYSTEM_EN if a.lang == "en" else SYSTEM_KO).replace("MAX_TOOLS", str(a.max_tools))
+    system = system_prompt(a.lang, a.tool_order).replace("MAX_TOOLS", str(a.max_tools))
     messages = [{"role": "user", "content": first_message(row, a.lang)}]
     tools_used, format_errors = [], 0
     for step in range(a.max_tools + 4):           # 도구 호출 + 형식 오류 안내 2회 + 최종 결정
@@ -252,6 +266,8 @@ def main():
     ap.add_argument("--temperature", type=float, default=0.3)
     ap.add_argument("--max-tools", type=int, default=4, help="사례당 도구 호출 최대 횟수")
     ap.add_argument("--lang", choices=["ko", "en"], default="ko", help="프롬프트 언어 (입력 CSV 언어와 맞출 것)")
+    ap.add_argument("--tool-order", choices=["default", "context_first"], default="default",
+                    help="도구 목록 순서 비교 실험용. 본 실행은 default")
     ap.add_argument("--mock", action="store_true"); ap.add_argument("--resume", action="store_true")
     ap.add_argument("--limit", type=int, default=0, help="시험 실행: 앞에서 N개 사례만")
     ap.add_argument("--cases", default="", help="시험 실행: 쉼표로 구분한 case_id만 (예: S001,S039)")
@@ -295,7 +311,7 @@ def main():
             with open(a.out, "a", newline="", encoding="utf-8") as f:
                 csv.writer(f).writerow([r["case_id"], run, act, why, ">".join(used), len(used)])
             with open(trace, "a", encoding="utf-8") as f:
-                f.write(json.dumps({"case_id": r["case_id"], "run": run, "action": act, "messages": msgs}, ensure_ascii=False) + "\n")
+                f.write(json.dumps({"case_id": r["case_id"], "run": run, "action": act, "messages": msgs, "tool_order": a.tool_order}, ensure_ascii=False) + "\n")
             n += 1
             eta = (time.time() - t_start) / max(n - len(done), 1) * (total - n) / 60
             print(f"[{n}/{total}] run{run} {r['case_id']} -> {act} tools={'>'.join(used) or '-'} ({time.time()-t0:.1f}s, 남은 약 {eta:.1f}분)", flush=True)
