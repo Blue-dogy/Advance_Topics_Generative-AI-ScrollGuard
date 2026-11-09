@@ -4,7 +4,7 @@ An evaluation benchmark for **ScrollGuard**, an intent-aware agent that breaks t
 
 The benchmark measures one decision: given a smartphone-usage situation, **should the agent intervene now?**
 
-> Special Topics on Generative AI (Agentic AI), Phase 2 · version 3.2 · 81 cases · labels validated by 2 annotators (Cohen's kappa 0.68 between them)
+> Special Topics on Generative AI (Agentic AI), Phase 2 · version 3.3 · 81 cases · labels validated by 2 annotators (Cohen's kappa 0.68 between them)
 >
 > Reports: [English](docs/ScrollGuard_Phase2_Benchmark_EN.pdf) · [한국어](docs/ScrollGuard_Phase2_Benchmark_KO.pdf)
 
@@ -81,6 +81,32 @@ Real values come from the public dataset `micro_datasetA.csv` (5,777 rows). Goal
 | B4 word classifier (diagnostic, trained on labels) | 0.63 | 0.50 | 0.69 |
 
 An agent meets the goal when it beats B2 on accuracy and cost score, keeps false_intervention low (target ≤ 0.10), asks on unclear cases (ask_recall > 0), beats B3 on counterfactual pairs, and stays valid and consistent. See the report for the full criteria.
+
+### Results (main runs, v3)
+
+Two 7B models through LM Studio, English inputs, temperature 0.3. Track A ran 3 times (243 replies) and track B once (81 cases). Files and full scores are in [`docs/results/v3/`](docs/results/v3/), and the analysis is in section 4 of the report.
+
+| Run | Accuracy [95% CI] | Agreed 65 | Cost | Detect | False int. | ask_recall | Pairs both correct | Context checked |
+|---|---|---|---|---|---|---|---|---|
+| EXAONE-3.5-7.8B, track A | 0.62 [0.53, 0.71] | 0.68 | 0.70 | 0.89 | 0.36 | 0.00 | 0.83 | - |
+| Qwen2.5-7B, track A | **0.63** [0.53, 0.72] | **0.71** | **0.73** | 0.62 | **0.10** | 0.00 | **0.89** | - |
+| EXAONE-3.5-7.8B, track B | 0.48 [0.37, 0.59] | 0.51 | 0.58 | 0.78 | 0.50 | 0.13 | 0.50 | 1% |
+| Qwen2.5-7B, track B | 0.42 [0.32, 0.53] | 0.51 | 0.56 | 0.16 | 0.15 | 0.00 | 0.67 | 9% |
+| B2 feature rule | 0.53 [0.43, 0.63] | 0.62 | 0.66 | 0.34 | 0.06 | 0.00 | 0.50 | - |
+
+"Agreed 65" scores only the cases where both independent annotators chose the final label (`evaluate.py --agreed-only`).
+
+- **Track A:** both models beat the rule baseline but err in opposite directions. Qwen rarely intervenes when a goal is stated, even after the user drifted from it. EXAONE intervenes on normal use without a goal.
+- **No asking:** both models chose `ask_context` 2 times in 486 track A decisions, so boundary cases score 0.15-0.19.
+- **Track B:** both models mostly decided from the touch log alone, reading it in opposite ways ("regular = focused" vs. "irregular = autopilot").
+- **No run meets every success criterion.** Qwen track A misses only `ask_recall`.
+
+Two experiments on the same 30 cases, with decision rules fixed in advance ([`docs/results/ablation/`](docs/results/ablation/), [`docs/results/ablation_tool_order/`](docs/results/ablation_tool_order/)):
+
+| Experiment | Change | Result |
+|---|---|---|
+| Action definitions (Qwen, track A) | Sharper split between `gentle_prompt` and `ask_context` | `ask_recall` 0 → 2/15, false interventions 0 → 3/8. Not adopted |
+| Tool order (track B) | `get_user_context` listed first | Context checked: Qwen 13% → 100%, EXAONE 0% → 3%. Qwen follows the list order; EXAONE looks for the touch log whatever the order |
 
 ### Label validation
 
@@ -160,7 +186,8 @@ To change a case, edit `build_benchmark.py` / `user_states.py` (and the translat
 
 ## 6. Limitations
 
-- Labels were validated by two annotators (kappa 0.68 between them), but `ask_context` has lower agreement and is the least certain category.
+- Labels were validated by two annotators (kappa 0.68 between them), but `ask_context` has lower agreement: only 5 of its 15 labels were chosen by both annotators. Scores on the 65 agreed cases are reported alongside.
+- Only two 7B models were evaluated. Track B and both experiments ran once, and only one alternative tool order was tried.
 - Only usage numbers, mood and typical usage are real; other signals are written or generated, and the sensing layer is assumed perfect.
 - 81 cases give a ±0.1 accuracy CI; smaller differences are not interpreted.
 - Error costs are design assumptions; report them with the sensitivity analysis.
@@ -174,6 +201,7 @@ ScrollGuard는 사용 시간만 보고 막는 잠금 앱과 달리, 맥락을 �
 - **트랙 A:** 입력 15열을 모두 보고 한 번에 결정 (`run_agent.py`)
 - **트랙 B:** 도구로 터치 기록과 맥락을 직접 조회한 뒤 결정 (`run_agent_tools.py`)
 - **채점:** `evaluate.py`가 기준선 6개와 함께 정확도, 불필요 개입률, 비용 점수, 반례 쌍 지표, 도구 사용 지표를 계산해요.
+- **본 실행 결과:** 트랙 A에서는 두 7B 모델 모두 규칙 기준선을 넘었지만(정확도 0.62·0.63 vs 0.53) 오류 방향이 반대였고, 애매할 때 묻지 않았어요. 트랙 B에서는 맥락을 거의 확인하지 않아 0.42~0.48로 떨어졌어요. 도구 순서만 바꾸자 Qwen의 맥락 확인이 13%에서 100%로 올랐어요(EXAONE은 거의 그대로).
 - **라벨 검증:** 독립 라벨러 2명이 81개를 모두 라벨링했어요. 라벨러끼리의 kappa는 0.68, 세 명 전체의 Fleiss' kappa는 0.71로 "상당한 일치"예요. 의견이 갈린 5개는 다수결로 정답을 고쳤어요.
 - **자세한 설명:** [한국어 보고서](docs/ScrollGuard_Phase2_Benchmark_KO.pdf), 파일 관계는 아래 그림을 참고하세요.
 
