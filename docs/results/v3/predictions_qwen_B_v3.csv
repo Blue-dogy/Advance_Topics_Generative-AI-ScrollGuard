@@ -1,0 +1,82 @@
+﻿case_id,run,action,reason,tools,n_steps
+S001,0,no_intervention,"Swiping intervals and speeds are relatively regular, but the user is deeply engaged in a single session for an entire hour.",get_touch_log>compute_stats>compute_stats,3
+S002,0,no_intervention,Swiping intervals and speed are relatively regular with low coefficients of variation.,get_touch_log>compute_stats>compute_stats,3
+S003,0,no_intervention,"Swiping intervals and speeds are relatively regular, no strong indication of autopilot use.",get_touch_log>compute_stats>compute_stats,3
+S004,0,no_intervention,"Swiping intervals are somewhat irregular, but swipe speeds indicate consistent engagement. The user seems to be actively participating in the community.",get_touch_log>compute_stats>compute_stats,3
+S005,0,no_intervention,"The swipe intervals are irregular with a coefficient of variation (CV) above 0.3, indicating varied session lengths. The swipe speed is relatively consistent with a low CV.",get_touch_log>compute_stats>compute_stats,3
+S006,0,no_intervention,"The swipe intervals and speeds are irregular, suggesting intentional use rather than autopilot.",get_touch_log>compute_stats>compute_stats,3
+S007,0,no_intervention,No swiping detected; likely using the app for reading or writing messages.,get_touch_log,1
+S008,0,no_intervention,The user is actively searching and saving relevant posts. The touch patterns are regular and the context indicates intentional use.,get_touch_log>compute_stats>compute_stats>get_user_context,4
+S009,0,no_intervention,"No swiping detected, likely not in a mindless scroll state.",get_touch_log,1
+S010,0,no_intervention,No swiping detected; likely using the map for navigation or a specific task.,get_touch_log,1
+S011,0,no_intervention,The swipe intervals and speeds are irregular but within a typical range for social media feeds.,get_touch_log>compute_stats>compute_stats,3
+S012,0,no_intervention,"Swiping intervals and speeds are relatively regular, with low coefficient of variation.",get_touch_log>compute_stats>compute_stats,3
+S013,0,no_intervention,Swiping intervals and speeds are relatively regular with low coefficient of variation.,get_touch_log>compute_stats>compute_stats,3
+S014,0,no_intervention,"Swipe intervals are relatively regular with a low coefficient of variation (cv = 0.175), and swipe speeds are consistent (cv = 0.086). The user is likely engaged in intentional scrolling.",get_touch_log>compute_stats>compute_stats,3
+S015,0,no_intervention,"The user is actively checking reviews for their next semester's registration and planning their timetable. Although the app usage is frequent, it appears to be intentional.",get_touch_log>compute_stats>compute_stats>get_user_context,4
+S016,0,gentle_prompt,"The swipe intervals are irregular with a coefficient of variation (CV) above 1, indicating potential autopilot use. However, the swipe speeds are very regular with a CV below 0.5, suggesting intentional control.",get_touch_log>compute_stats>compute_stats,3
+S017,0,gentle_prompt,"Swiping intervals and speed are irregular, with long pauses and high speeds indicating mindless scrolling.",get_touch_log,1
+S018,0,no_intervention,"The user is studying and has been pausing videos to save unfamiliar expressions. The touch log shows regular intervals but high speed, which could indicate focused study rather than autopilot scrolling.",get_touch_log>compute_stats>compute_stats>get_user_context,4
+S019,0,gentle_prompt,"The swipe intervals are irregular with a high coefficient of variation, suggesting mindless scrolling. Swipe speeds are relatively consistent.",get_touch_log>compute_stats>compute_stats,3
+S020,0,no_intervention,No swiping detected during the session.,get_touch_log,1
+S021,0,no_intervention,No swiping detected; likely not autopilot use.,get_touch_log,1
+S022,0,no_intervention,The swipe intervals and speeds are relatively regular with low coefficient of variation.,get_touch_log>compute_stats>compute_stats,3
+S023,0,no_intervention,"Swiping intervals are relatively regular with a low coefficient of variation, and swipe speeds are very consistent.",get_touch_log>compute_stats>compute_stats,3
+S024,0,no_intervention,"Swiping intervals and speeds are irregular, suggesting intentional use.",get_touch_log,1
+S025,0,no_intervention,"The swipe intervals and speeds are relatively regular, suggesting intentional use rather than autopilot scrolling.",get_touch_log>compute_stats>compute_stats,3
+S026,0,no_intervention,Swipe intervals and speed are relatively regular with low coefficient of variation.,get_touch_log>compute_stats>compute_stats,3
+S027,0,gentle_prompt,"The swipe intervals are irregular with a coefficient of variation (CV) above 1, indicating mindless scrolling. Swipe speeds are very regular with a CV below 0.3.",get_touch_log>compute_stats>compute_stats,3
+S028,0,no_intervention,No swiping detected; likely listening to the podcast.,get_touch_log,1
+S029,0,gentle_prompt,Swiping intervals and speeds are regular with low variability.,get_touch_log>compute_stats>compute_stats,3
+S030,0,no_intervention,"Swiping intervals and speeds are irregular, indicating intentional use.",get_touch_log,1
+S031,0,no_intervention,Swiping intervals and speeds are relatively regular with low coefficients of variation.,get_touch_log>compute_stats>compute_stats,3
+S032,0,no_intervention,The swipe intervals and speeds are irregular but within a normal range for video watching.,get_touch_log>compute_stats>compute_stats,3
+S033,0,no_intervention,"Swiping intervals and speeds are irregular, suggesting intentional use.",get_touch_log,1
+S034,0,no_intervention,Swipe intervals and speeds are relatively regular with low coefficient of variation.,get_touch_log>compute_stats>compute_stats,3
+S035,0,no_intervention,Swiping intervals and speeds are relatively regular with low coefficient of variation.,get_touch_log>compute_stats>compute_stats,3
+S036,0,gentle_prompt,"The user's stated goal is unclear, and their recent behavior suggests they might be on autopilot while writing content for their personal brand.",get_touch_log>compute_stats>compute_stats>get_user_context,4
+S037,0,no_intervention,The user is a 4th-year computer science student working on an assignment and organizing code. The irregular but focused scrolling suggests they are engaged in the task rather than mindlessly scrolling.,get_touch_log>compute_stats>compute_stats>get_user_context,4
+S038,0,no_intervention,"The swipe intervals and speeds are relatively regular with low coefficient of variation (cv), indicating intentional use.",get_touch_log>compute_stats>compute_stats,3
+S039,0,no_intervention,"The swipe intervals and speeds are relatively regular, indicating intentional use.",get_touch_log>compute_stats>compute_stats,3
+S040,0,no_intervention,"Swiping intervals and speeds are irregular, with no consistent pattern.",get_touch_log,1
+S041,0,no_intervention,Swiping intervals and speeds are relatively regular with low CV values.,get_touch_log>compute_stats>compute_stats,3
+S042,0,no_intervention,"Swiping intervals and speeds are irregular, suggesting intentional use.",get_touch_log,1
+S043,0,no_intervention,No swiping detected; likely intentional use.,get_touch_log,1
+S044,0,no_intervention,Swiping intervals and speeds are relatively regular with low CV values.,get_touch_log>compute_stats>compute_stats,3
+S045,0,no_intervention,"The swipe intervals are relatively regular with a coefficient of variation (cv) of 0.38, and the speed is very consistent with a cv of 0.19. The user seems to be intentionally watching videos.",get_touch_log>compute_stats>compute_stats,3
+S046,0,no_intervention,Swiping intervals and speeds are relatively regular with low coefficients of variation.,get_touch_log>compute_stats>compute_stats,3
+S047,0,gentle_prompt,"Swiping intervals are irregular with a coefficient of variation (CV) above 0.8, indicating mindless scrolling. Swipe speeds are relatively consistent with a CV below 0.4.",get_touch_log>compute_stats>compute_stats,3
+S048,0,no_intervention,Swipe intervals and speeds are regular with low variability.,get_touch_log>compute_stats>compute_stats,3
+S049,0,no_intervention,The swipe intervals and speeds are relatively regular with low coefficients of variation.,get_touch_log>compute_stats>compute_stats,3
+S050,0,no_intervention,"Swiping intervals are irregular with a coefficient of variation (CV) above 0.3, indicating varied use patterns. Swiping speed is relatively consistent with a low CV.",get_touch_log>compute_stats>compute_stats,3
+S051,0,no_intervention,"Swipes are regular and fast, indicating intentional use.",get_touch_log>compute_stats>compute_stats,3
+S052,0,no_intervention,The user is binge-reading a completed webtoon with clear goals and context. The touch log shows irregular but purposeful swiping.,get_touch_log>compute_stats>compute_stats>get_user_context,4
+S053,0,no_intervention,"Swiping intervals and speeds are irregular, no single long session.",get_touch_log,1
+S054,0,no_intervention,Swiping intervals and speed are relatively regular with low CV values.,get_touch_log>compute_stats>compute_stats,3
+S055,0,gentle_prompt,"Swiping intervals are irregular with a coefficient of variation (CV) of 1.091, indicating mindless scrolling.",get_touch_log>compute_stats>compute_stats,3
+S056,0,no_intervention,Swiping intervals and speeds suggest regular but not mindless use.,get_touch_log>compute_stats>compute_stats,3
+S057,0,gentle_prompt,"Swiping intervals and speeds are relatively regular, but the user spends a significant portion of their time on the app.",get_touch_log>compute_stats>compute_stats,3
+S058,0,no_intervention,"The swipe intervals and speeds are irregular, but the user is still engaging with the content.",get_touch_log>compute_stats>compute_stats,3
+S059,0,no_intervention,"Swiping intervals and speeds are relatively regular, suggesting intentional use.",get_touch_log>compute_stats>compute_stats,3
+S060,0,no_intervention,Swipe intervals and speeds are relatively regular with low coefficient of variation.,get_touch_log>compute_stats>compute_stats,3
+S061,0,gentle_prompt,"The swipe intervals are highly irregular with a coefficient of variation (CV) above 1, indicating mindless scrolling. Swipe speeds are very regular with a CV close to 0.",get_touch_log>compute_stats>compute_stats,3
+S062,0,no_intervention,No swiping detected; likely using the app for reading or writing messages.,get_touch_log,1
+S063,0,gentle_prompt,"Swiping intervals and speeds are irregular, with long pauses and high speeds indicating mindless scrolling.",get_touch_log,1
+S064,0,no_intervention,The user is studying and seems to be on track with their goal despite the recent video recommendations.,get_touch_log>compute_stats>compute_stats>get_user_context,4
+S065,0,gentle_prompt,"The swipe intervals and speeds are relatively regular, but the user is still watching short videos for a significant portion of their time.",get_touch_log>compute_stats>compute_stats,3
+S066,0,no_intervention,"Swiping intervals are irregular with a coefficient of variation (CV) around 0.63, and swipe speeds are relatively regular with CV close to 0.3.",get_touch_log>compute_stats>compute_stats,3
+S067,0,gentle_prompt,"The swipe intervals and speeds are relatively regular, with low coefficient of variation (cv). The user is likely engaged but could be on autopilot.",get_touch_log>compute_stats>compute_stats,3
+S068,0,no_intervention,The swipe intervals and speeds are relatively regular with low coefficients of variation.,get_touch_log>compute_stats>compute_stats,3
+S069,0,no_intervention,"No swiping detected, likely intentional use.",get_touch_log,1
+S070,0,no_intervention,"Swiping intervals are irregular with a coefficient of variation (CV) above 0.5, and swipe speeds are relatively consistent with a CV below 0.3.",get_touch_log>compute_stats>compute_stats,3
+S071,0,no_intervention,"Swiping intervals and speeds are relatively consistent, indicating intentional use.",get_touch_log>compute_stats>compute_stats,3
+S072,0,no_intervention,"Swipe intervals are relatively regular with a low coefficient of variation, and swipe speed is very consistent.",get_touch_log>compute_stats>compute_stats,3
+S073,0,no_intervention,Swiping intervals and speeds are relatively regular with low coefficients of variation.,get_touch_log>compute_stats>compute_stats,3
+S074,0,no_intervention,"Swipe intervals and speeds are relatively regular, with low coefficient of variation.",get_touch_log>compute_stats>compute_stats,3
+S075,0,gentle_prompt,"Swiping intervals are relatively regular with a low coefficient of variation (cv = 0.272), and swipe speeds are very consistent (cv = 0.134). The user is likely on autopilot.",get_touch_log>compute_stats>compute_stats,3
+S076,0,no_intervention,Swiping intervals and speeds are relatively regular with low coefficients of variation.,get_touch_log>compute_stats>compute_stats,3
+S077,0,no_intervention,Swiping intervals and speeds are relatively regular with low coefficients of variation.,get_touch_log>compute_stats>compute_stats,3
+S078,0,no_intervention,"Swiping intervals are irregular with a coefficient of variation (cv) of 0.697, indicating varied session lengths and durations. Swipe speeds have a lower cv of 0.341, suggesting more consistent speed but less regular timing.",get_touch_log>compute_stats>compute_stats,3
+S079,0,no_intervention,The swipe intervals and speeds are irregular but within normal ranges for shopping app usage.,get_touch_log>compute_stats>compute_stats,3
+S080,0,no_intervention,"No swiping detected, likely using the app for reading or writing messages.",get_touch_log,1
+S081,0,no_intervention,"The swipe intervals and speeds are relatively regular, with low coefficient of variation.",get_touch_log>compute_stats>compute_stats,3

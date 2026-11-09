@@ -130,6 +130,8 @@ Label agreement of two independent annotators:
 python agreement.py annot_a.csv annot_b.csv
 ```
 
+Add `--agreed-only` to `evaluate.py` to score only the 65 cases where both independent annotators chose the final label; this shows how much of a result depends on contested labels.
+
 Add `--resume` to a run command to continue after an interruption; failed calls are retried. `--mock` checks the pipeline without a model.
 
 ### Evaluating your own agent
