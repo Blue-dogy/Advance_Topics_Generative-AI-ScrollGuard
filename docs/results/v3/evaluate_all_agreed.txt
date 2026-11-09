@@ -1,0 +1,19 @@
+[--agreed-only] 라벨러 2명이 모두 정답과 같은 사례 65개만 채점 (no_intervention 33, gentle_prompt 27, ask_context 5)
+
+                          accuracy      acc_ci95 macro_f1 detect_rate false_intervention question_burden ask_recall hard_acc cf_acc pair_both_correct gesture_flip cost_score invalid_rate consistency  n_runs
+B0_always_no_intervention     0.51  [0.38, 0.63]     0.22        0.00               0.00            0.00       0.00     0.48   0.50              0.50         0.00       0.62         0.00         nan       1
+B0_always_gentle_prompt       0.42  [0.29, 0.54]     0.20        1.00               1.00            0.00       0.00     0.39   0.50              0.50         0.00       0.45         0.00         nan       1
+B0_always_ask_context         0.08  [0.02, 0.14]     0.05        0.00               0.00            1.00       1.00     0.13   0.00              0.00         0.00       0.39         0.00         nan       1
+B1_time_threshold_30min       0.48  [0.35, 0.60]     0.33        0.44               0.42            0.00       0.00     0.35   0.33              0.33         0.00       0.55         0.00         nan       1
+B2_feature_rule_no_text       0.62  [0.49, 0.72]     0.40        0.33               0.06            0.00       0.00     0.71   0.75              0.50         0.50       0.70         0.00         nan       1
+B3_swipe_cv_lt_0.6            0.58  [0.46, 0.69]     0.40        0.63               0.36            0.00       0.00     0.61   0.50              0.00         1.00       0.65         0.00         nan       1
+B4_text_words_LOO             0.68  [0.57, 0.78]     0.57        1.00               0.52            0.00       0.20     0.77   1.00              1.00         0.00       0.70         0.00         nan       1
+predictions_exaone_A_v3       0.68  [0.58, 0.78]     0.47        0.88               0.37            0.00       0.00     0.69   0.92              0.83         0.17       0.72         0.00        0.75       3
+predictions_exaone_B_v3       0.51  [0.38, 0.63]     0.41        0.78               0.52            0.15       0.20     0.48   0.75              0.50         0.50       0.57         0.00         nan       1
+predictions_qwen_A_v3         0.71  [0.61, 0.80]     0.48        0.60               0.10            0.00       0.00     0.70   0.94              0.89         0.11       0.77         0.00        0.77       3
+predictions_qwen_B_v3         0.51  [0.38, 0.63]     0.30        0.19               0.15            0.00       0.00     0.52   0.75              0.67         0.17       0.61         0.00         nan       1
+
+[터치 트랙 도구 사용] context_check_rate=맥락 도구를 부른 비율, acc_with/without_context=맥락 확인 여부별 정확도
+                        context_check_rate touch_check_rate stats_tool_rate mean_tool_calls acc_with_context acc_without_context
+predictions_exaone_B_v3               0.02             0.98            0.05            1.05             1.00                0.50
+predictions_qwen_B_v3                 0.11             1.00            0.78            2.68             0.71                0.48
