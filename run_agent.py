@@ -124,20 +124,38 @@ def _load(c):
         return ast.literal_eval(c)
 
 ACT_RE = re.compile(r'"action"\s*:\s*"\s*(no_intervention|gentle_prompt|ask_context)\s*"', re.I)
+# JSON 밖에 따옴표 없이 쓴 행동(**action: gentle_prompt**). 근거 문장 속 단어를 행동으로 읽지 않도록 JSON 덩어리를 지운 나머지에서만 찾는다
+ACT_LOOSE = re.compile(r'\baction\**\s*:\s*\**\s*(no_intervention|gentle_prompt|ask_context)\b', re.I)
 REASON_KEY = re.compile(r'"reason"\s*:\s*"')
 
 def salvage(t):
     """JSON으로 읽히지 않는 응답(근거 안의 따옴표 등)에서 행동 이름만 정확히 일치할 때 꺼낸다. 행동이 없으면(잘린 응답) 복구하지 않는다"""
-    m = ACT_RE.search(t or "")
+    t = t or ""
+    m = ACT_RE.search(t)
     if not m:
-        return None
+        outside = t
+        for cand in _objects(t):
+            outside = outside.replace(cand, " ")
+        m2 = ACT_LOOSE.search(outside)
+        return (m2.group(1).lower(), _reason_elsewhere(t)) if m2 else None
     act = m.group(1).lower()
     w = REASON_KEY.search(t)
     if not w:
         return act, ""
     # 근거 키부터 action 키 앞까지(근거가 뒤에 오면 끝까지)를 근거로 본다. 따옴표·쉼표가 어긋나도 내용은 살린다
     end = m.start() if m.start() > w.end() else len(t)
-    return act, t[w.end():end].strip().rstrip('{}," \n').strip()
+    return act, t[w.end():end].strip().rstrip('{}," \n*').strip()
+
+def _reason_elsewhere(t):
+    """근거와 행동을 JSON 두 개로 나눠 쓴 경우({"reason": ...} {"action": ...}): 다른 덩어리의 근거를 가져온다"""
+    for cand in _objects(t):
+        try:
+            d = _load(re.sub(r",\s*([}\]])", r"\1", cand))
+        except Exception:
+            continue
+        if isinstance(d, dict) and str(d.get("reason", "")).strip():
+            return str(d["reason"]).strip().rstrip(",").strip()
+    return ""
 
 def _objects(text):
     """문장 안의 { ... } 덩어리를 괄호 짝으로 하나씩 꺼낸다"""
@@ -172,7 +190,7 @@ def parse(text):
             except Exception:
                 continue
             if isinstance(d, dict) and "action" in d:
-                return norm_action(d.get("action", "")), str(d.get("reason", "")).strip()
+                return norm_action(d.get("action", "")), str(d.get("reason", "")).strip() or _reason_elsewhere(t)
     s = salvage(t)
     if s:
         return s
