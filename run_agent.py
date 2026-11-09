@@ -124,20 +124,48 @@ def _load(c):
         return ast.literal_eval(c)
 
 ACT_RE = re.compile(r'"action"\s*:\s*"\s*(no_intervention|gentle_prompt|ask_context)\s*"', re.I)
+# JSON 밖에 따옴표 없이 쓴 행동(**action: gentle_prompt**). 근거 문장 속 단어를 행동으로 읽지 않도록 JSON 덩어리를 지운 나머지에서만 찾는다
+# 근거 문자열을 닫지 않고 키를 이어 쓴 경우: "reason": "..., action": "no_intervention"
+ACT_UNOPENED = re.compile(r'(?:[,\s]|\\n)action"\s*:\s*"\s*(no_intervention|gentle_prompt|ask_context)\s*"', re.I)
+# 근거 문자열의 맨 끝에 행동을 붙여 쓴 경우: "reason": "...\nAction: gentle_prompt". 끝에 있을 때만 (문장 중간의 단어는 아님)
+ACT_TAIL = re.compile(r'(?:[,.;]\s*|\n\s*|\\n\s*)action"?\s*:\s*"?\s*(no_intervention|gentle_prompt|ask_context)\s*"?\s*$', re.I)
+
+def split_tail(reason):
+    """근거 끝에 붙은 행동을 떼어 (행동, 근거)로. 없으면 None"""
+    m = ACT_TAIL.search(str(reason).strip())
+    return (m.group(1).lower(), str(reason).strip()[:m.start()].strip().rstrip(",").strip()) if m else None
+
+ACT_LOOSE = re.compile(r'\baction\**\s*:\s*\**\s*(no_intervention|gentle_prompt|ask_context)\b', re.I)
 REASON_KEY = re.compile(r'"reason"\s*:\s*"')
 
 def salvage(t):
     """JSON으로 읽히지 않는 응답(근거 안의 따옴표 등)에서 행동 이름만 정확히 일치할 때 꺼낸다. 행동이 없으면(잘린 응답) 복구하지 않는다"""
-    m = ACT_RE.search(t or "")
+    t = t or ""
+    m = ACT_RE.search(t) or ACT_UNOPENED.search(t)
     if not m:
-        return None
+        outside = t
+        for cand in _objects(t):
+            outside = outside.replace(cand, " ")
+        m2 = ACT_LOOSE.search(outside)
+        return (m2.group(1).lower(), _reason_elsewhere(t)) if m2 else None
     act = m.group(1).lower()
     w = REASON_KEY.search(t)
     if not w:
         return act, ""
     # 근거 키부터 action 키 앞까지(근거가 뒤에 오면 끝까지)를 근거로 본다. 따옴표·쉼표가 어긋나도 내용은 살린다
     end = m.start() if m.start() > w.end() else len(t)
-    return act, t[w.end():end].strip().rstrip('{}," \n').strip()
+    return act, t[w.end():end].strip().rstrip('{}," \n*').strip()
+
+def _reason_elsewhere(t):
+    """근거와 행동을 JSON 두 개로 나눠 쓴 경우({"reason": ...} {"action": ...}): 다른 덩어리의 근거를 가져온다"""
+    for cand in _objects(t):
+        try:
+            d = _load(re.sub(r",\s*([}\]])", r"\1", cand))
+        except Exception:
+            continue
+        if isinstance(d, dict) and str(d.get("reason", "")).strip():
+            return str(d["reason"]).strip().rstrip(",").strip()
+    return ""
 
 def _objects(text):
     """문장 안의 { ... } 덩어리를 괄호 짝으로 하나씩 꺼낸다"""
@@ -172,7 +200,9 @@ def parse(text):
             except Exception:
                 continue
             if isinstance(d, dict) and "action" in d:
-                return norm_action(d.get("action", "")), str(d.get("reason", "")).strip()
+                return norm_action(d.get("action", "")), str(d.get("reason", "")).strip() or _reason_elsewhere(t)
+            if isinstance(d, dict) and "reason" in d and split_tail(d["reason"]):
+                return split_tail(d["reason"])
     s = salvage(t)
     if s:
         return s
@@ -197,7 +227,10 @@ def main():
     raw_path = os.path.splitext(a.out)[0] + ".jsonl"   # 모델 원문 응답: 파서를 고쳐도 다시 실행하지 않고 --reparse로 재채점
 
     if a.reparse:
-        rows = [json.loads(x) for x in open(raw_path, encoding="utf-8")]
+        rows = {}
+        for x in open(raw_path, encoding="utf-8"):   # --resume로 다시 돌린 사례는 같은 (case_id, run)이 여러 번 있다: 마지막 기록만
+            r = json.loads(x); rows[(r["case_id"], r["run"])] = r
+        rows = list(rows.values())
         with open(a.out, "w", newline="", encoding="utf-8-sig") as f:
             w = csv.writer(f); w.writerow(["case_id", "run", "action", "reason"])
             for r in rows:
