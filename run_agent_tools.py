@@ -138,6 +138,16 @@ def _load(c):
 
 ACT_RE = re.compile(r'"action"\s*:\s*"\s*(no_intervention|gentle_prompt|ask_context)\s*"', re.I)
 # JSON 밖에 따옴표 없이 쓴 행동(**action: gentle_prompt**). 근거 문장 속 단어를 행동으로 읽지 않도록 JSON 덩어리를 지운 나머지에서만 찾는다
+# 근거 문자열을 닫지 않고 키를 이어 쓴 경우: "reason": "..., action": "no_intervention"
+ACT_UNOPENED = re.compile(r'(?:[,\s]|\\n)action"\s*:\s*"\s*(no_intervention|gentle_prompt|ask_context)\s*"', re.I)
+# 근거 문자열의 맨 끝에 행동을 붙여 쓴 경우: "reason": "...\nAction: gentle_prompt". 끝에 있을 때만 (문장 중간의 단어는 아님)
+ACT_TAIL = re.compile(r'(?:[,.;]\s*|\n\s*|\\n\s*)action"?\s*:\s*"?\s*(no_intervention|gentle_prompt|ask_context)\s*"?\s*$', re.I)
+
+def split_tail(reason):
+    """근거 끝에 붙은 행동을 떼어 (행동, 근거)로. 없으면 None"""
+    m = ACT_TAIL.search(str(reason).strip())
+    return (m.group(1).lower(), str(reason).strip()[:m.start()].strip().rstrip(",").strip()) if m else None
+
 ACT_LOOSE = re.compile(r'\baction\**\s*:\s*\**\s*(no_intervention|gentle_prompt|ask_context)\b', re.I)
 TOOL_RE = re.compile(r'"(?:tool|action)"\s*:\s*"\s*(get_touch_log|compute_stats|get_user_context)\s*"'
                      r'(?:.*?"field"\s*:\s*"(swipe_intervals_sec|swipe_speed_px_per_s)")?', re.S)
@@ -146,7 +156,7 @@ REASON_KEY = re.compile(r'"reason"\s*:\s*"')
 def salvage(t):
     """JSON으로 읽히지 않는 응답(근거 안의 따옴표 등)에서 행동 이름만 정확히 일치할 때 꺼낸다. 행동이 없으면(잘린 응답) 복구하지 않는다"""
     t = t or ""
-    m = ACT_RE.search(t)
+    m = ACT_RE.search(t) or ACT_UNOPENED.search(t)
     if not m:
         outside = t
         for cand in _objects(t):
@@ -204,6 +214,8 @@ def parse(text):
                 d = _load(c)
             except Exception:
                 continue
+            if isinstance(d, dict) and "tool" not in d and "action" not in d and "reason" in d and split_tail(d["reason"]):
+                d = dict(zip(("action", "reason"), split_tail(d["reason"])))
             if isinstance(d, dict) and "tool" not in d and "action" not in d:
                 if len(d) == 1 and next(iter(d)) in TOOLS:            # {"get_user_context": {}}: 도구 이름을 키로 쓴 경우
                     k = next(iter(d)); d = {"tool": k, "args": d[k] if isinstance(d[k], dict) else {}}
@@ -230,6 +242,38 @@ def mock_reply(step, row, rnd):
         return json.dumps({"tool": t, "args": {"values": [1, 2, 3]} if t == "compute_stats" else {}})
     return json.dumps({"reason": "mock", "action": rnd.choice(ACTIONS)})
 
+def interpret(text, n_tools, max_tools):
+    """모델 응답 하나를 해석: ("final", 행동, 근거) / ("tool", 이름, 인자) / ("error", 행동 값이 잘못됐는지)"""
+    d = parse(text)
+    if isinstance(d, dict) and str(d.get("action", "")).strip() in TOOLS:   # 도구 이름을 action 키에 쓴 경우: 결정이 아니라 도구 호출로 본다
+        d = {"tool": str(d["action"]).strip(), "args": d.get("args", {})}
+    if isinstance(d, dict) and "action" in d and norm_action(d["action"]) in ACTIONS:
+        return "final", norm_action(d["action"]), str(d.get("reason", "")).strip()
+    if isinstance(d, dict) and "tool" in d and n_tools < max_tools:
+        return "tool", str(d.get("tool", "")).strip(), d.get("args", {})
+    return "error", isinstance(d, dict) and "action" in d, None             # 세 행동 밖의 값이면 True: 다시 묻는다
+
+def replay(messages, max_tools):
+    """저장된 대화를 현재 파서로 다시 해석한다(--reparse). 모델 응답은 그대로 두고 해석만 바꾼다.
+    해석이 바뀌어 원래 대화와 갈라지면(전에는 형식 오류였던 응답이 이제 도구 호출로 읽히는 등) 이후 응답은 쓸 수 없으므로 RERUN"""
+    tools_used, format_errors = [], 0
+    for i, m in enumerate(messages):
+        if m["role"] != "assistant":
+            continue
+        kind, x, y = interpret(m["content"], len(tools_used), max_tools)
+        if kind == "final":
+            return x, y, tools_used
+        nxt = messages[i + 1]["content"] if i + 1 < len(messages) else None
+        if nxt is None:
+            break
+        if (kind == "tool") != nxt.startswith(("Tool result:", "도구 결과:")):
+            return "RERUN", "parser now reads this turn differently; rerun with --cases", tools_used
+        if kind == "tool":
+            tools_used.append(x)
+        else:
+            format_errors += 1
+    return "PARSE_ERROR", (messages[-1]["content"] if messages else "")[:200].replace("\n", " "), tools_used
+
 def run_case(row, a, touch, rnd):
     system = (SYSTEM_EN if a.lang == "en" else SYSTEM_KO).replace("MAX_TOOLS", str(a.max_tools))
     messages = [{"role": "user", "content": first_message(row, a.lang)}]
@@ -237,15 +281,13 @@ def run_case(row, a, touch, rnd):
     for step in range(a.max_tools + 4):           # 도구 호출 + 형식 오류 안내 2회 + 최종 결정
         text, cut = (mock_reply(len(tools_used), row, random.Random(f"{rnd}{row['case_id']}")), False) if a.mock else call_llm(system, messages, a)
         messages.append({"role": "assistant", "content": text})
-        d = parse(text)
-        if isinstance(d, dict) and str(d.get("action", "")).strip() in TOOLS:   # 도구 이름을 action 키에 쓴 경우: 결정이 아니라 도구 호출로 본다
-            d = {"tool": str(d["action"]).strip(), "args": d.get("args", {})}
-        if isinstance(d, dict) and "action" in d and norm_action(d["action"]) in ACTIONS:
-            return norm_action(d["action"]), str(d.get("reason", "")).strip(), tools_used, messages
-        bad_action = isinstance(d, dict) and "action" in d             # 세 행동 밖의 값: 형식 오류로 보고 다시 묻는다
-        if isinstance(d, dict) and "tool" in d and len(tools_used) < a.max_tools:
-            name = str(d.get("tool", "")).strip(); tools_used.append(name)
-            result = run_tool(name, d.get("args", {}), row, touch, a.lang)
+        kind, x, y = interpret(text, len(tools_used), a.max_tools)
+        if kind == "final":
+            return x, y, tools_used, messages
+        bad_action = kind == "error" and x
+        if kind == "tool":
+            name = x; tools_used.append(name)
+            result = run_tool(name, y, row, touch, a.lang)
             messages.append({"role": "user", "content": "Tool result: " + json.dumps(result, ensure_ascii=False)})
             continue
         format_errors += 1
@@ -275,7 +317,24 @@ def main():
     ap.add_argument("--mock", action="store_true"); ap.add_argument("--resume", action="store_true")
     ap.add_argument("--limit", type=int, default=0, help="시험 실행: 앞에서 N개 사례만")
     ap.add_argument("--cases", default="", help="시험 실행: 쉼표로 구분한 case_id만 (예: S001,S039)")
+    ap.add_argument("--reparse", action="store_true", help="모델을 다시 부르지 않고 저장된 대화(.jsonl)를 현재 파서로 다시 해석해 --out을 새로 쓴다")
     a = ap.parse_args()
+    if a.reparse:
+        trace = os.path.splitext(a.out)[0] + ".jsonl"
+        rows = {}
+        for x in open(trace, encoding="utf-8"):      # --resume로 다시 돌린 사례는 같은 (case_id, run)이 여러 번 있다: 마지막 기록만
+            r = json.loads(x); rows[(r["case_id"], r["run"])] = r
+        rows = list(rows.values())
+        with open(a.out, "w", newline="", encoding="utf-8-sig") as f:
+            w = csv.writer(f); w.writerow(["case_id", "run", "action", "reason", "tools", "n_steps"])
+            for r in rows:
+                if r["action"] == "API_ERROR" or not r.get("messages"):
+                    act, why, used = r["action"], "", []
+                else:
+                    act, why, used = replay(r["messages"], a.max_tools)
+                w.writerow([r["case_id"], r["run"], act, why, ">".join(used), len(used)])
+        print(f"재해석 완료: {len(rows)}건 -> {a.out}")
+        return
 
     df = pd.read_csv(a.inputs)
     for c in ["user_stated_goal", "user_state", "recent_context"]:
