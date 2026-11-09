@@ -1,0 +1,31 @@
+﻿case_id,run,action,reason,tools,n_steps
+S001,0,no_intervention,User is studying and appears to be on task.,get_user_context,1
+S003,0,no_intervention,"The user's swipe intervals and speeds are relatively regular, suggesting intentional use rather than autopilot behavior.",get_user_context>get_touch_log>compute_stats>compute_stats,4
+S006,0,no_intervention,"The swipe intervals and speeds are irregular, indicating the user is not on autopilot but rather engaging with the content intentionally.",get_user_context>get_touch_log>compute_stats>compute_stats,4
+S008,0,no_intervention,User is actively searching and engaging with content related to their goal.,get_user_context,1
+S017,0,no_intervention,"Swiping intervals are irregular with a coefficient of variation (cv) of 0.528, and swipe speeds are relatively consistent with cv at 0.291.",get_user_context>get_touch_log>compute_stats>compute_stats,4
+S018,0,no_intervention,User is studying with short videos and appears to be engaged in the content.,get_user_context,1
+S021,0,no_intervention,No swipe data suggests intentional use.,get_user_context>get_touch_log,2
+S023,0,gentle_prompt,User stated goal is missing and has a history of mindless scrolling. Recent context shows they are at the dorm desk with a book open but have been scrolling for nearly an hour.,get_user_context,1
+S027,0,gentle_prompt,"Swiping intervals are irregular with a high coefficient of variation, indicating mindless scrolling. Swipe speeds are relatively regular.",get_user_context>get_touch_log>compute_stats>compute_stats,4
+S031,0,gentle_prompt,"The swipe intervals and speeds are relatively regular, but the user has been scrolling through their feed for a significant portion of their lunch break.",get_user_context>get_touch_log>compute_stats>compute_stats,4
+S033,0,no_intervention,User is actively searching and watching recipe videos related to their stated goal of making a soybean paste stew for lunch.,get_user_context,1
+S034,0,no_intervention,"Swiping intervals and speeds are relatively regular, no clear autopilot use.",get_user_context>get_touch_log>compute_stats>compute_stats,4
+S036,0,gentle_prompt,"Swiping intervals and speeds are relatively regular, but the user has been scrolling extensively for an extended session.",get_user_context>get_touch_log>compute_stats>compute_stats,4
+S037,0,no_intervention,The user is intentionally watching videos for an important assignment and has a clear goal. No signs of autopilot use.,get_user_context,1
+S040,0,no_intervention,"Swipes are irregular with a high coefficient of variation and varied intervals, suggesting the user is not on autopilot.",get_user_context>get_touch_log>compute_stats>compute_stats,4
+S041,0,gentle_prompt,"The user's swipes are relatively regular and fast, but the session concentration is low, suggesting they might be on autopilot.",get_user_context>get_touch_log>compute_stats>compute_stats,4
+S044,0,no_intervention,"Swiping intervals are relatively regular with a low coefficient of variation (CV), and swipe speeds are consistent as well.",get_user_context>get_touch_log>compute_stats>compute_stats,4
+S045,0,no_intervention,The user is actively searching for relevant content and has a clear goal. The usage pattern does not indicate autopilot scrolling.,get_user_context,1
+S047,0,no_intervention,"Swipes are irregular and concentrated, but the user is a university student with an upcoming assignment. The context suggests focused work time ahead.",get_user_context>get_touch_log,2
+S049,0,gentle_prompt,"The swipe intervals and speeds are relatively regular, but the user is spending a significant portion of their time on short video apps during a study period.",get_user_context>get_touch_log>compute_stats>compute_stats,4
+S056,0,no_intervention,"User is actively deleting and organizing photos, not mindlessly scrolling.",get_user_context,1
+S059,0,gentle_prompt,"Swiping intervals are relatively regular with a low coefficient of variation (0.259), and swipe speeds are very consistent (cv = 0.119). The user is likely on autopilot.",get_user_context>get_touch_log>compute_stats>compute_stats,4
+S060,0,no_intervention,User seems to be engaging with content from a friend's birthday party. No clear sign of autopilot use.,get_user_context,1
+S061,0,no_intervention,User stated no specific goal and is watching a documentary series. This seems intentional.,get_user_context,1
+S065,0,no_intervention,The user is fixing their bicycle and has paused to watch relevant videos. This appears intentional.,get_user_context,1
+S073,0,no_intervention,User is taking a break and seems engaged with specific memories.,get_user_context,1
+S075,0,no_intervention,"User is actively checking election results, likely not autopilot use.",get_user_context,1
+S076,0,no_intervention,User is intentionally searching for a padded jacket to buy.,get_user_context,1
+S078,0,no_intervention,User is checking weather and preparing for class. Current usage does not seem to be autopilot.,get_user_context,1
+S080,0,no_intervention,"User is an office worker on a weekday afternoon, heading to a meeting. The recent context shows they were notified about a message but have restricted their interactions in the app.",get_user_context,1

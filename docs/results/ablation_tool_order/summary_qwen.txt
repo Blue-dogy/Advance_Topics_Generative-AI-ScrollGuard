@@ -1,0 +1,19 @@
+공통 사례 30개 (정답: ask_context 15, no_intervention 8, gentle_prompt 7)
+
+                                n  accuracy  ask_recall  question_burden  false_intervention  detect_rate  asked_total  invalid  context_check_rate
+predictions_qwen_B_v3          30      0.23        0.00             0.00                0.25         0.14            0        0                0.13
+ablation_B_qwen_context_first  30      0.33        0.00             0.00                0.12         0.43            0        0                1.00
+
+변형에 따라 답이 바뀐 사례 10개 (NO = no_intervention, GP = gentle_prompt, AC = ask_context)
+        label predictions_qwen_B_v3 ablation_B_qwen_context_first
+case_id                                                          
+S017       AC                    GP                            NO
+S023       GP                    NO                            GP
+S031       AC                    NO                            GP
+S041       GP                    NO                            GP
+S047       GP                    GP                            NO
+S049       GP                    NO                            GP
+S059       AC                    NO                            GP
+S061       AC                    GP                            NO
+S065       NO                    GP                            NO
+S075       AC                    GP                            NO
