@@ -40,17 +40,22 @@ def main():
     if not files:
         sys.exit(__doc__)
     lab = pd.read_csv("benchmark_labels.csv").set_index("case_id")
-    preds = {}
+    preds, ctx = {}, {}
     for f in files:
         p = pd.read_csv(f)
         p = p[p.run == p.run.min()].set_index("case_id")   # 1회 실행 비교. 여러 번 돌렸으면 첫 실행만
-        preds[os.path.splitext(os.path.basename(f))[0]] = p.action
+        name = os.path.splitext(os.path.basename(f))[0]
+        preds[name] = p.action
+        if "tools" in p:   # 트랙 B: 맥락 도구를 부른 사례
+            ctx[name] = p.tools.fillna("").astype(str).str.contains("get_user_context")
     cases = sorted(set.intersection(*(set(p.index) for p in preds.values())))
     lab = lab.loc[cases]
     print(f"공통 사례 {len(cases)}개 (정답: " + ", ".join(f"{k} {v}" for k, v in lab.expected_action.value_counts().items()) + ")\n")
 
     res = pd.DataFrame({k: summary(lab, p.loc[cases].rename("action")) for k, p in preds.items()}).T
     res = res.astype({c: int for c in ("n", "asked_total", "invalid")})
+    if ctx:
+        res["context_check_rate"] = [ctx[k].loc[cases].mean() if k in ctx else float("nan") for k in res.index]
     print(res.to_string(float_format=lambda v: f"{v:.2f}"))
 
     table = pd.DataFrame({k: p.loc[cases] for k, p in preds.items()})
