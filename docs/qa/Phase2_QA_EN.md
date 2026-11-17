@@ -136,7 +136,7 @@ All rows below use the **original labels, before majority vote**, so the annotat
 
 ## 8. `ask_recall` is very low. Isn't that a problem with the benchmark?
 
-**Short answer.** No. People did ask on these cases, so the low score shows a real model weakness; the remaining weakness is that this category is small, which we report.
+**Short answer.** No. People did ask on these cases, so the low score shows a real weakness of the two agents we tested (both 4-bit 7B models, so not a claim about models in general); the remaining weakness is that this category is small, which we report.
 
 - **The task is possible:** with the same inputs, annotator A chose "ask first" 15 times and annotator B 9 times. Both models together asked 2 times in 486 track A decisions, and both times wrongly.
 - **It is not caused by unclear labels:** on the 5 `ask_context` cases both annotators agreed on, the models still asked 0 times.
